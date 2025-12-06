@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-
+from frontend.ui import render_header, render_mode_selection, render_subject_selection, render_question, render_results
 import streamlit as st
 
 # Ensure Python can find backend and frontend modules
