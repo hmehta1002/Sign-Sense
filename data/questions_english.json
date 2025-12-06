@@ -1,123 +1,277 @@
 [
   {
-    "id": 1,
-    "question": "Choose the correct spelling:",
-    "options": ["Occured", "Occurred", "Ocurred", "Ocurred"],
-    "answer": "Occurred",
-    "difficulty": "medium"
-  },
-  {
-    "id": 2,
-    "question": "Which word is a synonym of 'reluctant'?",
-    "options": ["Unwilling", "Joyful", "Energetic", "Certain"],
-    "answer": "Unwilling",
-    "difficulty": "medium"
-  },
-  {
-    "id": 3,
-    "question": "Select the antonym of 'fragile':",
-    "options": ["Weak", "Delicate", "Strong", "Small"],
-    "answer": "Strong",
-    "difficulty": "medium"
-  },
-  {
-    "id": 4,
-    "question": "Which sentence is punctuated correctly?",
-    "options": [
-      "I bought apples, oranges and grapes.",
-      "I bought apples, oranges, and grapes.",
-      "I bought, apples oranges and grapes.",
-      "I bought apples oranges, and grapes."
+    "id": "ENG_Q1",
+    "question": "Choose the correct synonym of 'happy':",
+    "options": ["sad", "joyful", "angry", "silent"],
+    "answer": "joyful",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q1.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q1.mp4",
+    "hints": [
+      "Synonym means same meaning.",
+      "Happy means positive emotion.",
+      "Joyful is closest."
     ],
-    "answer": "I bought apples, oranges, and grapes.",
-    "difficulty": "medium"
+    "explanation": "Synonyms have similar meanings. Joyful matches happy.",
+    "tts_text": "Choose the synonym for the word happy."
   },
   {
-    "id": 5,
-    "question": "Identify the adverb: 'She quickly finished her homework.'",
-    "options": ["She", "Quickly", "Finished", "Homework"],
-    "answer": "Quickly",
-    "difficulty": "medium"
-  },
-  {
-    "id": 6,
-    "question": "Choose the correct homophone: 'Can you _____ my voice?'",
-    "options": ["hear", "here", "hare", "hear's"],
-    "answer": "hear",
-    "difficulty": "medium"
-  },
-  {
-    "id": 7,
-    "question": "Which sentence uses the past tense correctly?",
+    "id": "ENG_Q2",
+    "question": "Which sentence is grammatically correct?",
     "options": [
-      "She run yesterday.",
-      "She ran yesterday.",
-      "She running yesterday.",
-      "She runs yesterday."
+      "She don't like coffee.",
+      "She doesn't likes coffee.",
+      "She doesn't like coffee.",
+      "She don't likes coffee."
     ],
-    "answer": "She ran yesterday.",
-    "difficulty": "medium"
+    "answer": "She doesn't like coffee.",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q2.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q2.mp4",
+    "hints": [
+      "Remember subject-verb agreement.",
+      "Doesn't always pairs with base verb.",
+      "Correct form is: She doesn't like coffee."
+    ],
+    "explanation": "'Doesn't' must be followed by the base verb, not 'likes'.",
+    "tts_text": "Select the grammatically correct sentence."
   },
   {
-    "id": 8,
-    "question": "Which is a metaphor?",
+    "id": "ENG_Q3",
+    "question": "Fill in the blank: The cat jumped ___ the wall.",
+    "options": ["under", "over", "between", "inside"],
+    "answer": "over",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q3.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q3.mp4",
+    "hints": [
+      "Think about movement direction.",
+      "The cat went across the wall.",
+      "So, 'over' fits."
+    ],
+    "explanation": "Over expresses motion from one side to another.",
+    "tts_text": "Fill in the blank: The cat jumped over the wall."
+  },
+  {
+    "id": "ENG_Q4",
+    "question": "Choose the antonym of 'brave':",
+    "options": ["bold", "fearless", "cowardly", "confident"],
+    "answer": "cowardly",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q4.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q4.mp4",
+    "hints": [
+      "Antonym means opposite meaning.",
+      "Brave means fearless.",
+      "Opposite: cowardly."
+    ],
+    "explanation": "'Cowardly' is the opposite of 'brave'.",
+    "tts_text": "Choose the antonym of the word brave."
+  },
+  {
+    "id": "ENG_Q5",
+    "question": "Which sentence sounds polite in a formal context?",
     "options": [
-      "As brave as a lion.",
-      "The world is a stage.",
-      "She sings like a bird.",
-      "The sky is bright."
+      "Give me the file.",
+      "I need the file now.",
+      "Could you please share the file with me?",
+      "You must send the file."
     ],
-    "answer": "The world is a stage.",
-    "difficulty": "medium"
+    "answer": "Could you please share the file with me?",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q5.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q5.mp4",
+    "hints": [
+      "Polite tone often includes 'please' or softening phrases.",
+      "\"Could you\" or \"Would you\" sound formal.",
+      "Correct answer uses polite phrasing."
+    ],
+    "explanation": "Softened modal phrasing makes requests more polite.",
+    "tts_text": "Which of the following sounds polite and formal?"
   },
   {
-    "id": 9,
-    "question": "Choose the correct form: 'Neither of the girls ____ coming.'",
-    "options": ["are", "were", "is", "be"],
-    "answer": "is",
-    "difficulty": "hard"
+    "id": "ENG_Q6",
+    "question": "Choose the correctly punctuated sentence:",
+    "options": [
+      "Its a nice day today.",
+      "It's a nice day today.",
+      "Its' a nice day today.",
+      "It a's nice day today."
+    ],
+    "answer": "It's a nice day today.",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q6.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q6.mp4",
+    "hints": [
+      "It's = it is.",
+      "Its means possession.",
+      "'It's a nice day' is correct."
+    ],
+    "explanation": "'It's' is the contraction of 'it is'.",
+    "tts_text": "Choose the correctly punctuated sentence."
   },
   {
-    "id": 10,
-    "question": "Pick the correct verb form: 'If I ____ earlier, I would have caught the bus.'",
-    "options": ["woke", "wake", "had woken", "have woke"],
-    "answer": "had woken",
-    "difficulty": "hard"
+    "id": "ENG_Q7",
+    "question": "Complete the analogy: Book is to Read as Food is to ___",
+    "options": ["cook", "eat", "buy", "grow"],
+    "answer": "eat",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q7.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q7.mp4",
+    "hints": [
+      "Book → action = read",
+      "Food → action = eat",
+      "Correct answer: eat"
+    ],
+    "explanation": "Analogy compares item to its main action.",
+    "tts_text": "Complete the analogy: Book is to read as food is to eat."
   },
   {
-    "id": 11,
-    "question": "What figure of speech is in: 'The wind whispered through the trees'?",
-    "options": ["Metaphor", "Simile", "Personification", "Onomatopoeia"],
-    "answer": "Personification",
-    "difficulty": "medium"
+    "id": "ENG_Q8",
+    "question": "Rewrite formally: 'Hey, send that report ASAP!'",
+    "options": [
+      "Send that report immediately.",
+      "Could you please share the report as soon as possible?",
+      "You must send the report now.",
+      "Send the report when you can."
+    ],
+    "answer": "Could you please share the report as soon as possible?",
+    "difficulty": "hard",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q8.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q8.mp4",
+    "hints": [
+      "Think polite professional tone.",
+      "Use modal verbs.",
+      "\"Could you please\" is polite and formal."
+    ],
+    "explanation": "Formal tone uses softer phrasing and structure.",
+    "tts_text": "Rewrite the sentence in a formal tone."
   },
   {
-    "id": 12,
-    "question": "Which word is the preposition in: 'He sat beside his friend'?",
-    "options": ["He", "sat", "beside", "friend"],
-    "answer": "beside",
-    "difficulty": "medium"
+    "id": "ENG_Q9",
+    "question": "Which word best fits: The weather today is pleasantly ___",
+    "options": ["noisy", "cold", "warm", "silent"],
+    "answer": "warm",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q9.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q9.mp4",
+    "hints": [
+      "Weather describes temperature.",
+      "Pleasant usually means positive.",
+      "Warm fits better."
+    ],
+    "explanation": "Warm is the most appropriate adjective for pleasant weather.",
+    "tts_text": "Choose the correct word to complete the sentence."
   },
   {
-    "id": 13,
-    "question": "Find the subject: 'Running late, the student rushed to class.'",
-    "options": ["Running late", "student", "rushed", "class"],
-    "answer": "student",
-    "difficulty": "medium"
+    "id": "ENG_Q10",
+    "question": "Which tense is used in: 'She has completed her project.'",
+    "options": [
+      "Simple past",
+      "Present perfect",
+      "Past perfect",
+      "Future continuous"
+    ],
+    "answer": "Present perfect",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q10.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q10.mp4",
+    "hints": [
+      "Look for: has/have + past participle.",
+      "Completed (past participle).",
+      "Correct tense: present perfect."
+    ],
+    "explanation": "Present perfect uses has/have + past participle.",
+    "tts_text": "Identify the tense in the sentence: She has completed her project."
   },
   {
-    "id": 14,
-    "question": "Choose the best transition word: '____, we concluded the experiment.'",
-    "options": ["Finally", "Because", "However", "Unless"],
-    "answer": "Finally",
-    "difficulty": "medium"
+    "id": "ENG_Q11",
+    "question": "Which prefix changes the meaning of 'possible' to its opposite?",
+    "options": ["re-", "un-", "mis-", "pre-"],
+    "answer": "un-",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q11.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q11.mp4",
+    "hints": [
+      "Opposite prefixes include: un-, in-, dis-",
+      "'Impossible' is also correct, but prefix for 'possible' is more commonly 'im-' or 'un-' depending context.",
+      "Answer: un-"
+    ],
+    "explanation": "Un- changes meaning to its opposite.",
+    "tts_text": "Which prefix forms the opposite meaning of the word possible?"
   },
   {
-    "id": 15,
-    "question": "Which option best matches the tone: 'The instructions must be followed strictly.'",
-    "options": ["Friendly", "Formal", "Playful", "Confused"],
-    "answer": "Formal",
-    "difficulty": "medium"
+    "id": "ENG_Q12",
+    "question": "Choose the correct plural form:",
+    "options": ["childs", "childes", "children", "childrens"],
+    "answer": "children",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q12.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q12.mp4",
+    "hints": [
+      "This is an irregular plural word.",
+      "Not formed by adding 's'.",
+      "Correct form: children."
+    ],
+    "explanation": "Some English nouns follow irregular plural patterns.",
+    "tts_text": "Choose the correct plural form of the word child."
+  },
+  {
+    "id": "ENG_Q13",
+    "question": "Which sentence uses the word 'their' correctly?",
+    "options": [
+      "There going to school.",
+      "Their going to school.",
+      "They're going to school.",
+      "There dog is barking."
+    ],
+    "answer": "They're going to school.",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q13.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q13.mp4",
+    "hints": [
+      "There = place, Their = belonging, They're = they are.",
+      "'They're going to school' fits meaning.",
+      "Answer: They're."
+    ],
+    "explanation": "They're is the contraction of they are.",
+    "tts_text": "Choose the sentence that correctly uses the word their or its variations."
+  },
+  {
+    "id": "ENG_Q14",
+    "question": "Select the best concluding sentence: 'Technology has become a crucial part of education.'",
+    "options": [
+      "Therefore, it should be banned.",
+      "As a result, many students dislike school.",
+      "Thus, integrating it responsibly is important.",
+      "So, everyone should use phones in class."
+    ],
+    "answer": "Thus, integrating it responsibly is important.",
+    "difficulty": "hard",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q14.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q14.mp4",
+    "hints": [
+      "Look for logical conclusion.",
+      "Should connect back to key idea.",
+      "Answer acknowledges responsible usage."
+    ],
+    "explanation": "Academic writing requires logical alignment.",
+    "tts_text": "Select the most logical concluding sentence."
+  },
+  {
+    "id": "ENG_Q15",
+    "question": "Choose the word that best completes the sentence: 'She speaks English very ___.'",
+    "options": ["well", "good", "better", "best"],
+    "answer": "well",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/eng_q15.gif",
+    "isl_video": "https://placeholder.signsense.ai/eng_q15.mp4",
+    "hints": [
+      "Use adverbs after verbs like speak.",
+      "'Well' is an adverb.",
+      "Correct answer: well."
+    ],
+    "explanation": "'Well' modifies the verb speaks.",
+    "tts_text": "Choose the correct word to complete the sentence: She speaks English very well."
   }
 ]
-
