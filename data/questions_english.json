@@ -1,1 +1,123 @@
+[
+  {
+    "id": 1,
+    "question": "Choose the correct spelling:",
+    "options": ["Occured", "Occurred", "Ocurred", "Ocurred"],
+    "answer": "Occurred",
+    "difficulty": "medium"
+  },
+  {
+    "id": 2,
+    "question": "Which word is a synonym of 'reluctant'?",
+    "options": ["Unwilling", "Joyful", "Energetic", "Certain"],
+    "answer": "Unwilling",
+    "difficulty": "medium"
+  },
+  {
+    "id": 3,
+    "question": "Select the antonym of 'fragile':",
+    "options": ["Weak", "Delicate", "Strong", "Small"],
+    "answer": "Strong",
+    "difficulty": "medium"
+  },
+  {
+    "id": 4,
+    "question": "Which sentence is punctuated correctly?",
+    "options": [
+      "I bought apples, oranges and grapes.",
+      "I bought apples, oranges, and grapes.",
+      "I bought, apples oranges and grapes.",
+      "I bought apples oranges, and grapes."
+    ],
+    "answer": "I bought apples, oranges, and grapes.",
+    "difficulty": "medium"
+  },
+  {
+    "id": 5,
+    "question": "Identify the adverb: 'She quickly finished her homework.'",
+    "options": ["She", "Quickly", "Finished", "Homework"],
+    "answer": "Quickly",
+    "difficulty": "medium"
+  },
+  {
+    "id": 6,
+    "question": "Choose the correct homophone: 'Can you _____ my voice?'",
+    "options": ["hear", "here", "hare", "hear's"],
+    "answer": "hear",
+    "difficulty": "medium"
+  },
+  {
+    "id": 7,
+    "question": "Which sentence uses the past tense correctly?",
+    "options": [
+      "She run yesterday.",
+      "She ran yesterday.",
+      "She running yesterday.",
+      "She runs yesterday."
+    ],
+    "answer": "She ran yesterday.",
+    "difficulty": "medium"
+  },
+  {
+    "id": 8,
+    "question": "Which is a metaphor?",
+    "options": [
+      "As brave as a lion.",
+      "The world is a stage.",
+      "She sings like a bird.",
+      "The sky is bright."
+    ],
+    "answer": "The world is a stage.",
+    "difficulty": "medium"
+  },
+  {
+    "id": 9,
+    "question": "Choose the correct form: 'Neither of the girls ____ coming.'",
+    "options": ["are", "were", "is", "be"],
+    "answer": "is",
+    "difficulty": "hard"
+  },
+  {
+    "id": 10,
+    "question": "Pick the correct verb form: 'If I ____ earlier, I would have caught the bus.'",
+    "options": ["woke", "wake", "had woken", "have woke"],
+    "answer": "had woken",
+    "difficulty": "hard"
+  },
+  {
+    "id": 11,
+    "question": "What figure of speech is in: 'The wind whispered through the trees'?",
+    "options": ["Metaphor", "Simile", "Personification", "Onomatopoeia"],
+    "answer": "Personification",
+    "difficulty": "medium"
+  },
+  {
+    "id": 12,
+    "question": "Which word is the preposition in: 'He sat beside his friend'?",
+    "options": ["He", "sat", "beside", "friend"],
+    "answer": "beside",
+    "difficulty": "medium"
+  },
+  {
+    "id": 13,
+    "question": "Find the subject: 'Running late, the student rushed to class.'",
+    "options": ["Running late", "student", "rushed", "class"],
+    "answer": "student",
+    "difficulty": "medium"
+  },
+  {
+    "id": 14,
+    "question": "Choose the best transition word: '____, we concluded the experiment.'",
+    "options": ["Finally", "Because", "However", "Unless"],
+    "answer": "Finally",
+    "difficulty": "medium"
+  },
+  {
+    "id": 15,
+    "question": "Which option best matches the tone: 'The instructions must be followed strictly.'",
+    "options": ["Friendly", "Formal", "Playful", "Confused"],
+    "answer": "Formal",
+    "difficulty": "medium"
+  }
+]
 
