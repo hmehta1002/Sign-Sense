@@ -1,1 +1,108 @@
+[
+  {
+    "id": 1,
+    "question": "Simplify: 48 ÷ 6 × 4",
+    "options": ["8", "24", "32", "12"],
+    "answer": "32",
+    "difficulty": "medium"
+  },
+  {
+    "id": 2,
+    "question": "Solve: 15% of 200",
+    "options": ["15", "25", "30", "35"],
+    "answer": "30",
+    "difficulty": "medium"
+  },
+  {
+    "id": 3,
+    "question": "Which number is a prime number?",
+    "options": ["21", "33", "37", "39"],
+    "answer": "37",
+    "difficulty": "medium"
+  },
+  {
+    "id": 4,
+    "question": "Which fraction is equivalent to 0.75?",
+    "options": ["1/2", "3/4", "4/5", "2/3"],
+    "answer": "3/4",
+    "difficulty": "medium"
+  },
+  {
+    "id": 5,
+    "question": "What is the LCM of 6 and 8?",
+    "options": ["12", "16", "24", "48"],
+    "answer": "24",
+    "difficulty": "medium"
+  },
+  {
+    "id": 6,
+    "question": "What is the area of a rectangle with length 9 cm and width 4 cm?",
+    "options": ["13 cm²", "18 cm²", "36 cm²", "45 cm²"],
+    "answer": "36 cm²",
+    "difficulty": "medium"
+  },
+  {
+    "id": 7,
+    "question": "Convert 3/5 to a percentage.",
+    "options": ["50%", "55%", "60%", "75%"],
+    "answer": "60%",
+    "difficulty": "medium"
+  },
+  {
+    "id": 8,
+    "question": "If x = 7, what is 3x + 4?",
+    "options": ["18", "20", "23", "25"],
+    "answer": "25",
+    "difficulty": "medium"
+  },
+  {
+    "id": 9,
+    "question": "Which of the following is a perfect square?",
+    "options": ["30", "48", "64", "72"],
+    "answer": "64",
+    "difficulty": "medium"
+  },
+  {
+    "id": 10,
+    "question": "Solve: 2² + (3 × 4)",
+    "options": ["10", "12", "16", "20"],
+    "answer": "16",
+    "difficulty": "medium"
+  },
+  {
+    "id": 11,
+    "question": "What is the perimeter of a square with side length 11 cm?",
+    "options": ["33 cm", "44 cm", "55 cm", "22 cm"],
+    "answer": "44 cm",
+    "difficulty": "medium"
+  },
+  {
+    "id": 12,
+    "question": "Estimate: 49 × 19 ≈",
+    "options": ["500", "900", "1000", "1200"],
+    "answer": "900",
+    "difficulty": "hard"
+  },
+  {
+    "id": 13,
+    "question": "Solve: √144",
+    "options": ["10", "11", "12", "14"],
+    "answer": "12",
+    "difficulty": "medium"
+  },
+  {
+    "id": 14,
+    "question": "If a train travels 240 km in 4 hours, what is its speed?",
+    "options": ["40 km/h", "50 km/h", "60 km/h", "80 km/h"],
+    "answer": "60 km/h",
+    "difficulty": "medium"
+  },
+  {
+    "id": 15,
+    "question": "What is the median of: 3, 9, 12, 15, 21?",
+    "options": ["9", "12", "15", "21"],
+    "answer": "12",
+    "difficulty": "medium"
+  }
+]
 
