@@ -1,8 +1,7 @@
 import streamlit as st
-
 from typing import Optional
 
-# ---------- CONSTANTS ----------
+# ------------- CONSTANTS -------------
 
 DYSLEXIA_FONT_URL = "https://fonts.cdnfonts.com/css/opendyslexic"
 
@@ -11,189 +10,166 @@ AVATAR_THINKING = "https://cdn-icons-png.flaticon.com/512/4333/4333622.png"
 AVATAR_HAPPY = "https://cdn-icons-png.flaticon.com/512/4333/4333625.png"
 
 
-# ---------- THEME & STYLE ----------
+# ------------- THEME & STYLE -------------
 
 def _apply_neon_theme():
-    """Inject global neon cyberpunk-style CSS for the whole app."""
+    """Global neon cyber theme (background, typography, cards)."""
     css = """
     <style>
-        /* App background */
-        .stApp {
-            background: radial-gradient(circle at top left, #301E67 0, #130828 35%, #050109 100%);
-            color: #f8f9ff;
-        }
+    .stApp {
+        background: radial-gradient(circle at top left, #4c1d95 0, #020617 45%, #000000 100%);
+        color: #f9fafb;
+    }
 
-        /* Center main block and give it a max width */
-        .main > div {
-            max-width: 980px;
-            margin: 0 auto;
-            padding-top: 1.4rem;
-        }
+    /* Center main content area */
+    .main > div {
+        max-width: 980px;
+        margin: 0 auto;
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
 
-        /* Sidebar styling */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #1b1438 0, #050318 100%);
-            border-right: 1px solid rgba(255,255,255,0.05);
-        }
-        section[data-testid="stSidebar"] .css-1d391kg {
-            padding-top: 1.2rem;
-        }
+    /* Neon header */
+    .neon-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #f97316, #e11d48, #6366f1, #22d3ee);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+    .neon-subtitle {
+        font-size: 0.95rem;
+        color: #e5e7eb;
+        opacity: 0.9;
+        margin-top: 0.35rem;
+    }
 
-        /* Neon title */
-        .neon-title {
-            font-size: 2.4rem;
-            font-weight: 800;
-            background: linear-gradient(90deg, #ff6bd5, #54ffe5);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.08em;
-        }
+    .hero-card {
+        border-radius: 20px;
+        padding: 1.4rem 1.6rem;
+        background: radial-gradient(circle at top left, rgba(251,113,133,0.35), rgba(15,23,42,0.96));
+        border: 1px solid rgba(129,140,248,0.7);
+        box-shadow: 0 0 28px rgba(129,140,248,0.45);
+    }
 
-        .neon-subtitle {
-            font-size: 0.98rem;
-            color: #d8d9ff;
-            opacity: 0.9;
-        }
+    /* Avatar */
+    .avatar {
+        width: 96px;
+        height: 96px;
+        border-radius: 999px;
+        border: 2px solid rgba(244,114,182,0.9);
+        box-shadow: 0 0 26px rgba(244,114,182,0.7);
+        object-fit: cover;
+        margin: 0.3rem auto 0.4rem auto;
+        display: block;
+    }
 
-        /* Hero card */
-        .hero-card {
-            border-radius: 18px;
-            padding: 1.4rem 1.6rem;
-            background: radial-gradient(circle at top left, rgba(138,87,255,0.35), rgba(8,9,37,0.9));
-            border: 1px solid rgba(137, 96, 255, 0.7);
-            box-shadow: 0 0 24px rgba(116, 76, 255, 0.35);
-        }
+    /* Mode card */
+    .mode-card {
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        background: linear-gradient(145deg, rgba(24,24,48,0.95), rgba(30,64,175,0.9));
+        border: 1px solid rgba(129,140,248,0.7);
+        box-shadow: 0 0 18px rgba(59,130,246,0.4);
+        margin-top: 0.4rem;
+    }
+    .mode-title {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    .mode-tag {
+        display: inline-block;
+        padding: 0.12rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        background: rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.7);
+        margin-left: 0.5rem;
+    }
+    .mode-desc {
+        font-size: 0.8rem;
+        color: #e5e7eb;
+        margin-top: 0.35rem;
+    }
 
-        /* Mode cards */
-        .mode-card {
-            border-radius: 16px;
-            padding: 0.9rem 1rem;
-            margin-bottom: 0.6rem;
-            background: linear-gradient(145deg, rgba(20,15,55,0.95), rgba(39,20,89,0.9));
-            border: 1px solid rgba(123, 97, 255, 0.6);
-            cursor: pointer;
-            transition: all 0.18s ease-out;
-        }
-        .mode-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 18px rgba(123, 97, 255, 0.7);
-        }
-        .mode-title {
-            font-weight: 700;
-            font-size: 0.98rem;
-        }
-        .mode-tag {
-            display: inline-block;
-            padding: 0.08rem 0.5rem;
-            border-radius: 999px;
-            font-size: 0.66rem;
-            background: rgba(255,255,255,0.08);
-            margin-left: 0.35rem;
-        }
-        .mode-desc {
-            font-size: 0.8rem;
-            color: #d5d6ff;
-            margin-top: 0.25rem;
-        }
+    /* Question card */
+    .question-card {
+        margin-top: 0.8rem;
+        border-radius: 18px;
+        padding: 1.1rem 1.4rem;
+        background: radial-gradient(circle at top left, rgba(59,130,246,0.35), rgba(15,23,42,0.96));
+        border: 1px solid rgba(96,165,250,0.8);
+        box-shadow: 0 0 20px rgba(59,130,246,0.45);
+    }
+    .question-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #bfdbfe;
+    }
+    .question-text {
+        margin-top: 0.45rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
 
-        /* Question container */
-        .question-card {
-            margin-top: 0.8rem;
-            border-radius: 18px;
-            padding: 1.2rem 1.4rem;
-            background: radial-gradient(circle at top left, rgba(98,83,238,0.3), rgba(9,7,30,0.9));
-            border: 1px solid rgba(129, 140, 248, 0.7);
-            box-shadow: 0 0 18px rgba(88, 28, 135, 0.45);
-        }
-        .question-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #a5b4fc;
-        }
-        .question-text {
-            margin-top: 0.4rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
+    /* Option styling (radio labels) */
+    div[role="radiogroup"] > label {
+        background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,64,175,0.9));
+        border-radius: 12px;
+        border: 1px solid rgba(148,163,246,0.7);
+        padding: 0.45rem 0.75rem;
+        margin-bottom: 0.4rem;
+        transition: all 0.16s ease-out;
+    }
+    div[role="radiogroup"] > label:hover {
+        border-color: rgba(251,113,133,0.9);
+        box-shadow: 0 0 18px rgba(251,113,133,0.6);
+        transform: translateY(-1px);
+    }
 
-        /* Options styling */
-        div[role="radiogroup"] > label {
-            background: linear-gradient(135deg, rgba(24,20,68,0.98), rgba(55,0,88,0.9));
-            border-radius: 12px;
-            margin-bottom: 0.35rem;
-            padding: 0.45rem 0.75rem;
-            border: 1px solid rgba(148, 163, 255, 0.4);
-            transition: all 0.15s ease-out;
-        }
-        div[role="radiogroup"] > label:hover {
-            border-color: rgba(244,114,182,0.8);
-            box-shadow: 0 0 16px rgba(244,114,182,0.4);
-        }
+    /* Result card */
+    .result-card {
+        border-radius: 18px;
+        padding: 1.2rem 1.5rem;
+        background: radial-gradient(circle at top left, rgba(74,222,128,0.25), rgba(6,78,59,0.95));
+        border: 1px solid rgba(74,222,128,0.85);
+        box-shadow: 0 0 24px rgba(34,197,94,0.55);
+    }
 
-        /* Avatar */
-        .avatar {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            border: 2px solid rgba(244,114,182,0.8);
-            box-shadow: 0 0 22px rgba(244,114,182,0.75);
-            margin: 0.4rem auto 0.6rem auto;
-            display: block;
-            object-fit: cover;
-        }
+    .metric-chip {
+        display: inline-block;
+        margin: 0.2rem 0.3rem 0 0;
+        padding: 0.16rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        background: rgba(15,23,42,0.8);
+        border: 1px solid rgba(148,163,184,0.7);
+    }
 
-        /* Result badges */
-        .result-card {
-            border-radius: 18px;
-            padding: 1.3rem 1.4rem;
-            background: radial-gradient(circle at top left, rgba(52,211,153,0.15), rgba(9,16,32,0.96));
-            border: 1px solid rgba(52,211,153,0.7);
-            box-shadow: 0 0 22px rgba(16,185,129,0.55);
-        }
-
-        .metric-chip {
-            display: inline-block;
-            margin-right: 0.35rem;
-            margin-bottom: 0.35rem;
-            padding: 0.16rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.72rem;
-            background: rgba(15,23,42,0.8);
-            border: 1px solid rgba(148,163,184,0.7);
-        }
-
-        /* Dyslexia spacing */
-        .dyslexia-text {
-            letter-spacing: 0.12em !important;
-            word-spacing: 0.18em !important;
-        }
+    /* Dyslexia spacing class */
+    .dyslexia-text {
+        letter-spacing: 0.12em !important;
+        word-spacing: 0.20em !important;
+    }
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
 
-def _apply_dyslexia_font_if_needed(mode: str):
-    if mode == "Dyslexia-Friendly":
-        st.markdown(
-            f'<link href="{DYSLEXIA_FONT_URL}" rel="stylesheet">',
-            unsafe_allow_html=True,
-        )
-
-
-# ---------- MODE HELPERS ----------
-
 def _mode_description(mode: str) -> str:
     if mode == "Standard":
-        return "Balanced layout, visible pacing, and default visuals."
+        return "Balanced layout with normal pacing and visuals."
     if mode == "ADHD-Friendly":
-        return "Reduced clutter, larger tap targets, and calmer pacing (no timer)."
+        return "Reduced clutter, bigger tap targets, and calmer pacing (no visible timer)."
     if mode == "Dyslexia-Friendly":
-        return "Adjusted spacing, optional color overlays, and dyslexia-aware text."
+        return "Extra spacing, optional overlays, and dyslexia-aware typography."
     if mode == "Autism-Friendly":
-        return "Low-stimulation visuals, predictable flow, and no surprise animations."
+        return "Low-stimulation visuals, predictable navigation, and no surprise animations."
     if mode == "Deaf/ISL Mode":
-        return "Indian Sign Language mode with signing avatar support and visual-first prompts."
+        return "Indian Sign Language mode with signing avatar support and visual-first guidance."
     return ""
 
 
@@ -201,13 +177,13 @@ def _choose_overlay(mode: str) -> Optional[str]:
     if mode != "Dyslexia-Friendly":
         return None
     overlay = st.selectbox(
-        "Reading comfort overlay (for Dyslexia mode):",
+        "Reading comfort overlay (Dyslexia mode):",
         ["None", "Blue", "Yellow", "Green"],
     )
     mapping = {
-        "Blue": "#1e293b55",
-        "Yellow": "#facc1555",
-        "Green": "#22c55e40",
+        "Blue": "#1e293b77",
+        "Yellow": "#facc1577",
+        "Green": "#22c55e66",
     }
     return mapping.get(overlay, None)
 
@@ -221,10 +197,19 @@ def _avatar_for_state(score: int, history_len: int) -> str:
     return AVATAR_HAPPY
 
 
-# ---------- PUBLIC UI FUNCTIONS (USED BY app.py) ----------
+def _apply_dyslexia_font_if_needed(mode: str):
+    if mode == "Dyslexia-Friendly":
+        st.markdown(
+            f'<link href="{DYSLEXIA_FONT_URL}" rel="stylesheet">',
+            unsafe_allow_html=True,
+        )
+
+
+# ------------- PUBLIC UI FUNCTIONS (USED BY app.py) -------------
+
 
 def render_header():
-    """Top hero header with neon style."""
+    """Top hero section."""
     _apply_neon_theme()
 
     col1, col2 = st.columns([2.5, 1.5])
@@ -232,20 +217,17 @@ def render_header():
         st.markdown(
             "<div class='hero-card'>"
             "<div class='neon-title'>SignSense</div>"
-            "<div class='neon-subtitle'>Neurodiversity-aware, ISL-ready adaptive quiz space.</div>"
+            "<div class='neon-subtitle'>Neon cyber learning hub with ADHD, Dyslexia, Autism, and ISL support.</div>"
             "</div>",
             unsafe_allow_html=True,
         )
     with col2:
-        st.markdown(
-            f"<img src='{AVATAR_NEUTRAL}' class='avatar'>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"<img src='{AVATAR_NEUTRAL}' class='avatar'>", unsafe_allow_html=True)
 
 
 def render_mode_selection() -> str:
-    """Mode selection with cyber cards."""
-    st.subheader("Choose Your Learning Environment")
+    """Mode selection screen."""
+    st.subheader("Select Your Accessibility Mode")
 
     modes = [
         "Standard",
@@ -255,19 +237,18 @@ def render_mode_selection() -> str:
         "Deaf/ISL Mode",
     ]
 
-    # Use radio for state, but the CSS makes it feel card-like
     mode = st.radio(
-        "Select a mode (you can always change later):",
+        "Choose the mode that best matches your learning style:",
         modes,
-        label_visibility="collapsed"
+        index=modes.index("Standard"),
     )
 
     st.markdown(
-        f"<div class='mode-card'>"
+        "<div class='mode-card'>"
         f"<span class='mode-title'>{mode}</span>"
-        f"<span class='mode-tag'>Accessibility profile</span>"
+        "<span class='mode-tag'>Accessibility profile</span>"
         f"<div class='mode-desc'>{_mode_description(mode)}</div>"
-        f"</div>",
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -275,62 +256,44 @@ def render_mode_selection() -> str:
 
 
 def render_subject_selection() -> str:
-    """Subject selection (Math / English) with neon style."""
-    st.subheader("Select a Subject")
+    """Subject selection screen."""
+    st.subheader("Choose Your Subject")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### Mathematics 🧮")
-        math_selected = st.radio(
-            "Math_radio",
-            ["Math"],
-            label_visibility="collapsed",
-            key="math_subject_radio",
-        )
-    with col2:
-        st.markdown("#### English ✍️")
-        eng_selected = st.radio(
-            "Eng_radio",
-            ["English"],
-            label_visibility="collapsed",
-            key="eng_subject_radio",
-        )
-
-    # Simple toggle: if user clicked Math radio last, choose math; else english.
-    # To avoid confusion, just show a combined radio below:
     subject_label = st.radio(
-        "Final subject selection:",
-        ["Mathematics", "English"],
+        "Pick one subject to begin:",
+        ["Mathematics 🧮", "English ✍️"],
         index=0,
     )
-    subject = "math" if subject_label == "Mathematics" else "english"
+    subject = "math" if subject_label.startswith("Mathematics") else "english"
 
-    st.caption("You can switch subjects anytime by restarting from the home screen.")
+    st.caption("You can restart from home if you want to switch subjects later.")
     return subject
 
 
 def render_question(question: dict, engine, mode: str):
-    """Show one question with avatar, overlays, and optional ISL media."""
+    """
+    Show a single question with:
+    - avatar
+    - dyslexia overlay if needed
+    - ISL GIF / video for Deaf mode
+    """
     st.subheader("Active Question")
 
-    # Dyslexia overlays
     overlay_color = _choose_overlay(mode)
     _apply_dyslexia_font_if_needed(mode)
 
-    # Avatar state
     avatar_url = _avatar_for_state(engine.score, len(engine.history))
     st.markdown(f"<img src='{avatar_url}' class='avatar'>", unsafe_allow_html=True)
 
-    # Wrap question in card + overlay if needed
     if overlay_color:
         st.markdown(
-            f"<div style='background:{overlay_color}; border-radius:18px; padding:0.4rem;'>",
+            f"<div style='background:{overlay_color}; border-radius:18px; padding:0.5rem;'>",
             unsafe_allow_html=True,
         )
 
     st.markdown(
         "<div class='question-card'>"
-        f"<div class='question-label'>Difficulty: {question.get('difficulty','easy').capitalize()}</div>"
+        f"<div class='question-label'>Difficulty · {question.get('difficulty', 'easy').capitalize()}</div>"
         f"<div class='question-text'>{question['question']}</div>"
         "</div>",
         unsafe_allow_html=True,
@@ -339,9 +302,9 @@ def render_question(question: dict, engine, mode: str):
     if overlay_color:
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # ISL media for Deaf mode
+    # Deaf/ISL Mode – show sign media if fields exist
     if mode == "Deaf/ISL Mode":
-        st.info("Indian Sign Language (ISL) support is enabled for this session.")
+        st.info("ISL support: signing avatar explanation available for this question.")
         gif_path = question.get("isl_gif")
         video_path = question.get("isl_video")
 
@@ -351,31 +314,30 @@ def render_question(question: dict, engine, mode: str):
             if st.button("🎬 Watch full ISL explanation video"):
                 st.video(video_path)
 
-    # Options
     selected = st.radio("Choose your answer:", question["options"])
 
-    # Hints – same for now, but could be mode-specific later
     hint_requested = st.checkbox("🧩 Show a gentle hint", value=False)
 
     return selected, hint_requested
 
 
 def render_results(engine):
-    """Neon-style result dashboard."""
+    """Neon cyber results dashboard."""
     st.subheader("Session Summary")
 
     summary = engine.summary()
     avatar_url = _avatar_for_state(engine.score, len(engine.history))
 
     col1, col2 = st.columns([2, 1])
+
     with col1:
         st.markdown("<div class='result-card'>", unsafe_allow_html=True)
         st.markdown(
-            f"**Mode:** {engine.mode}  |  **Subject:** {engine.subject.capitalize()}"
+            f"**Mode:** {engine.mode}  ·  **Subject:** {engine.subject.capitalize()}",
         )
         st.write(
             f"**Weighted score:** {summary['score']}  "
-            f"— Approx. performance: **{summary['percentage']:.1f}%**"
+            f"· Approx. performance: **{summary['percentage']:.1f}%**"
         )
         st.write(
             f"Questions answered: **{summary['total_answered']}**, "
@@ -393,22 +355,25 @@ def render_results(engine):
                 text = f"{label}: {count} questions"
             else:
                 text = f"{label}: {count} questions — {acc*100:.0f}% correct"
-            st.markdown(f"<span class='metric-chip'>{text}</span>", unsafe_allow_html=True)
+            st.markdown(
+                f"<span class='metric-chip'>{text}</span>",
+                unsafe_allow_html=True,
+            )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
         st.markdown(f"<img src='{avatar_url}' class='avatar'>", unsafe_allow_html=True)
         if summary["percentage"] >= 80:
-            st.success("High mastery ✔\n\nGreat job — this learner is ready for advanced content.")
+            st.success("High mastery · strong readiness for advanced content.")
         elif summary["percentage"] >= 50:
-            st.info("Developing mastery 🌱\n\nWith a bit more practice, scores can improve quickly.")
+            st.info("Developing mastery · with a bit more practice, scores can rise quickly.")
         else:
-            st.warning("Emerging skills ✨\n\nThis mode can be used for repeated safe practice.")
+            st.warning("Emerging skills · this is a safe space to keep practising.")
 
     st.markdown("---")
     st.caption(
-        "Roadmap: plug-in ML model for adaptive difficulty & richer ISL content library in the AI module."
+        "Roadmap: plug in an ML model in the AI module to drive adaptive difficulty and richer ISL content."
     )
 
     if st.button("🔁 Restart from Home"):
