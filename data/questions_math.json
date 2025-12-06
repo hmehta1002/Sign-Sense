@@ -1,108 +1,242 @@
 [
   {
-    "id": 1,
+    "id": "MATH_Q1",
     "question": "Simplify: 48 ÷ 6 × 4",
     "options": ["8", "24", "32", "12"],
     "answer": "32",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/math_q1.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q1.mp4",
+    "hints": [
+      "Division and multiplication have equal priority.",
+      "Solve left to right: 48 ÷ 6 = 8.",
+      "Then multiply: 8 × 4 = 32."
+    ],
+    "explanation": "According to the order of operations, multiplication and division are solved from left to right.",
+    "tts_text": "Simplify the expression: forty eight divided by six, multiplied by four."
   },
   {
-    "id": 2,
-    "question": "Solve: 15% of 200",
-    "options": ["15", "25", "30", "35"],
-    "answer": "30",
-    "difficulty": "medium"
+    "id": "MATH_Q2",
+    "question": "What is the value of 7² + 3²?",
+    "options": ["49", "58", "34", "25"],
+    "answer": "58",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q2.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q2.mp4",
+    "hints": [
+      "Square means multiply the number by itself.",
+      "7² = 49, 3² = 9.",
+      "49 + 9 = 58."
+    ],
+    "explanation": "A square is multiplying a number by itself, so 7² = 49 and 3² = 9.",
+    "tts_text": "What is seven squared plus three squared?"
   },
   {
-    "id": 3,
-    "question": "Which number is a prime number?",
-    "options": ["21", "33", "37", "39"],
-    "answer": "37",
-    "difficulty": "medium"
+    "id": "MATH_Q3",
+    "question": "Solve: 5x = 45",
+    "options": ["5", "6", "9", "10"],
+    "answer": "9",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q3.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q3.mp4",
+    "hints": [
+      "Divide both sides by 5.",
+      "45 divided by 5 equals 9.",
+      "So x = 9."
+    ],
+    "explanation": "To isolate x, divide both sides by 5.",
+    "tts_text": "Solve five x equals forty five."
   },
   {
-    "id": 4,
-    "question": "Which fraction is equivalent to 0.75?",
-    "options": ["1/2", "3/4", "4/5", "2/3"],
+    "id": "MATH_Q4",
+    "question": "The perimeter of a square is 36 cm. What is the length of one side?",
+    "options": ["6", "9", "12", "18"],
+    "answer": "9",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/math_q4.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q4.mp4",
+    "hints": [
+      "A square has four equal sides.",
+      "Divide perimeter by four.",
+      "36 ÷ 4 = 9."
+    ],
+    "explanation": "Perimeter of a square is 4 × side length.",
+    "tts_text": "The perimeter of a square is thirty six centimeters. What is one side?"
+  },
+  {
+    "id": "MATH_Q5",
+    "question": "Which is greater: 3/4 or 4/7?",
+    "options": ["3/4", "4/7", "Both equal", "Cannot be compared"],
     "answer": "3/4",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/math_q5.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q5.mp4",
+    "hints": [
+      "Compare using common denominators.",
+      "3/4 = 21/28, 4/7 = 16/28.",
+      "21 > 16."
+    ],
+    "explanation": "When converted to the same denominator (28), 3/4 becomes larger.",
+    "tts_text": "Which fraction is greater: three fourths or four sevenths?"
   },
   {
-    "id": 5,
-    "question": "What is the LCM of 6 and 8?",
-    "options": ["12", "16", "24", "48"],
-    "answer": "24",
-    "difficulty": "medium"
-  },
-  {
-    "id": 6,
-    "question": "What is the area of a rectangle with length 9 cm and width 4 cm?",
-    "options": ["13 cm²", "18 cm²", "36 cm²", "45 cm²"],
-    "answer": "36 cm²",
-    "difficulty": "medium"
-  },
-  {
-    "id": 7,
-    "question": "Convert 3/5 to a percentage.",
-    "options": ["50%", "55%", "60%", "75%"],
-    "answer": "60%",
-    "difficulty": "medium"
-  },
-  {
-    "id": 8,
-    "question": "If x = 7, what is 3x + 4?",
-    "options": ["18", "20", "23", "25"],
-    "answer": "25",
-    "difficulty": "medium"
-  },
-  {
-    "id": 9,
-    "question": "Which of the following is a perfect square?",
-    "options": ["30", "48", "64", "72"],
+    "id": "MATH_Q6",
+    "question": "What is the cube of 4?",
+    "options": ["16", "24", "64", "84"],
     "answer": "64",
-    "difficulty": "medium"
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q6.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q6.mp4",
+    "hints": [
+      "Cube means multiply three times.",
+      "4 × 4 × 4.",
+      "64."
+    ],
+    "explanation": "4 cubed equals 4 × 4 × 4 = 64.",
+    "tts_text": "What is four cubed?"
   },
   {
-    "id": 10,
-    "question": "Solve: 2² + (3 × 4)",
-    "options": ["10", "12", "16", "20"],
-    "answer": "16",
-    "difficulty": "medium"
-  },
-  {
-    "id": 11,
-    "question": "What is the perimeter of a square with side length 11 cm?",
-    "options": ["33 cm", "44 cm", "55 cm", "22 cm"],
-    "answer": "44 cm",
-    "difficulty": "medium"
-  },
-  {
-    "id": 12,
-    "question": "Estimate: 49 × 19 ≈",
-    "options": ["500", "900", "1000", "1200"],
-    "answer": "900",
-    "difficulty": "hard"
-  },
-  {
-    "id": 13,
-    "question": "Solve: √144",
+    "id": "MATH_Q7",
+    "question": "Calculate: √144",
     "options": ["10", "11", "12", "14"],
     "answer": "12",
-    "difficulty": "medium"
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q7.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q7.mp4",
+    "hints": [
+      "Which number squared equals 144?",
+      "12 × 12 = 144.",
+      "Answer: 12."
+    ],
+    "explanation": "The square root of 144 is 12.",
+    "tts_text": "What is the square root of one hundred forty four?"
   },
   {
-    "id": 14,
-    "question": "If a train travels 240 km in 4 hours, what is its speed?",
-    "options": ["40 km/h", "50 km/h", "60 km/h", "80 km/h"],
-    "answer": "60 km/h",
-    "difficulty": "medium"
+    "id": "MATH_Q8",
+    "question": "Convert 2.5 into a fraction.",
+    "options": ["2/5", "5/2", "3/2", "25/10"],
+    "answer": "5/2",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/math_q8.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q8.mp4",
+    "hints": [
+      "2.5 equals 25 tenths.",
+      "Simplify 25/10.",
+      "= 5/2."
+    ],
+    "explanation": "2.5 = 25/10 which simplifies to 5/2.",
+    "tts_text": "Convert two point five to a fraction."
   },
   {
-    "id": 15,
-    "question": "What is the median of: 3, 9, 12, 15, 21?",
-    "options": ["9", "12", "15", "21"],
-    "answer": "12",
-    "difficulty": "medium"
+    "id": "MATH_Q9",
+    "question": "What is the next number in the pattern: 4, 9, 16, 25, ___?",
+    "options": ["32", "36", "30", "49"],
+    "answer": "36",
+    "difficulty": "medium",
+    "isl_gif": "https://placeholder.signsense.ai/math_q9.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q9.mp4",
+    "hints": [
+      "Observe pattern: 2², 3², 4², 5².",
+      "Next is 6².",
+      "6² = 36."
+    ],
+    "explanation": "The series is square numbers: 2² → 6².",
+    "tts_text": "What is the next number in the pattern four, nine, sixteen, twenty five?"
+  },
+  {
+    "id": "MATH_Q10",
+    "question": "Solve: 3(x + 5) = 36",
+    "options": ["7", "8", "12", "10"],
+    "answer": "7",
+    "difficulty": "hard",
+    "isl_gif": "https://placeholder.signsense.ai/math_q10.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q10.mp4",
+    "hints": [
+      "Divide both sides by 3.",
+      "36 ÷ 3 = 12.",
+      "x + 5 = 12 → x = 7."
+    ],
+    "explanation": "Using algebraic isolation, x = 7.",
+    "tts_text": "Solve the equation three brackets x plus five equals thirty six."
+  },
+  {
+    "id": "MATH_Q11",
+    "question": "Find the mean of: 12, 14, 18, 16",
+    "options": ["14", "15", "16", "13"],
+    "answer": "15",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q11.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q11.mp4",
+    "hints": [
+      "Add all numbers.",
+      "Divide total by count.",
+      "(12 + 14 + 18 + 16) ÷ 4 = 60 ÷ 4 = 15."
+    ],
+    "explanation": "Mean is the sum divided by total items.",
+    "tts_text": "Find the mean of the numbers twelve, fourteen, eighteen, and sixteen."
+  },
+  {
+    "id": "MATH_Q12",
+    "question": "Which is equivalent to 6x + 3x?",
+    "options": ["3x²", "9x", "6x", "x+9"],
+    "answer": "9x",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q12.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q12.mp4",
+    "hints": [
+      "Combine like terms.",
+      "6x plus 3x.",
+      "Equals 9x."
+    ],
+    "explanation": "Like terms are added by combining their coefficients.",
+    "tts_text": "Which is equivalent to six x plus three x?"
+  },
+  {
+    "id": "MATH_Q13",
+    "question": "Evaluate: (3/5) × (10/9)",
+    "options": ["2/3", "1/3", "3/2", "5/6"],
+    "answer": "2/3",
+    "difficulty": "hard",
+    "isl_gif": "https://placeholder.signsense.ai/math_q13.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q13.mp4",
+    "hints": [
+      "Multiply numerators and denominators.",
+      "3 × 10 = 30, 5 × 9 = 45.",
+      "Simplify 30/45 → 2/3."
+    ],
+    "explanation": "Multiply fractions, then simplify.",
+    "tts_text": "Evaluate three fifths multiplied by ten ninths."
+  },
+  {
+    "id": "MATH_Q14",
+    "question": "Find the missing angle: A triangle has angles 40°, 70°, and ___",
+    "options": ["70°", "80°", "50°", "60°"],
+    "answer": "70°",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q14.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q14.mp4",
+    "hints": [
+      "Sum of angles in triangle = 180°",
+      "40 + 70 = 110",
+      "180 - 110 = 70"
+    ],
+    "explanation": "Sum of angles in triangle is always 180°.",
+    "tts_text": "Find the missing angle in a triangle with angles forty degrees and seventy degrees."
+  },
+  {
+    "id": "MATH_Q15",
+    "question": "Convert 0.04 to a percentage.",
+    "options": ["40%", "4%", "0.4%", "400%"],
+    "answer": "4%",
+    "difficulty": "easy",
+    "isl_gif": "https://placeholder.signsense.ai/math_q15.gif",
+    "isl_video": "https://placeholder.signsense.ai/math_q15.mp4",
+    "hints": [
+      "Multiply by 100.",
+      "0.04 × 100.",
+      "4%"
+    ],
+    "explanation": "Move decimal two places to convert decimals to percentage.",
+    "tts_text": "Convert zero point zero four to a percentage."
   }
 ]
-
