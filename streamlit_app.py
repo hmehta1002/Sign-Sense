@@ -1,8 +1,15 @@
 import sys
 import os
+import streamlit as st
 
-# Add the src folder to the system path so Python can find app.py
+# Allow Python to find the src folder
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-# Import and run the actual Streamlit app
-import app
+st.set_page_config(page_title="SignSense")
+
+try:
+    import app  # Run the actual app
+except Exception as e:
+    st.error("⚠️ Something went wrong.")
+    st.code(str(e))
+    raise
