@@ -2,7 +2,6 @@ import json
 import os
 import time
 
-
 class QuizEngine:
     def __init__(self, mode, subject):
         self.mode = mode
@@ -15,8 +14,9 @@ class QuizEngine:
         self.start_time = None
 
     def load_questions(self, subject):
-        # Correct path for Streamlit Cloud & local usage
-        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+        # Get absolute path of project root (works on Streamlit Cloud)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_path = os.path.join(project_root, "data")
 
         filename_map = {
             "math": "questions_math.json",
@@ -24,13 +24,15 @@ class QuizEngine:
         }
 
         if subject not in filename_map:
-            raise ValueError(f"❌ Unknown subject selected: {subject}")
+            raise ValueError(f"Unknown subject selected: {subject}")
 
-        filename = filename_map[subject]
-        filepath = os.path.join(base_path, filename)
+        filepath = os.path.join(data_path, filename_map[subject])
 
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"❌ Question file missing at: {filepath}")
+            raise FileNotFoundError(
+                f"❌ Question file missing at: {filepath}\n"
+                f"📂 Expected files in /data:\n - questions_math.json\n - questions_english.json"
+            )
 
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -44,7 +46,6 @@ class QuizEngine:
     def check_answer(self, selected):
         question = self.questions[self.index]
         correct = (question["answer"] == selected)
-
         time_taken = time.time() - self.start_time if self.start_time else None
 
         points = 10
