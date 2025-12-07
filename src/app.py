@@ -121,6 +121,13 @@ def main():
     init_session()
     render_header()
 
+    # Reset session state for showing modes again
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔁 Reset Setup"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
     # Sidebar Navigation
     page = st.sidebar.radio(
         "📍 Navigation",
@@ -128,7 +135,7 @@ def main():
     )
     st.session_state.page = page
 
-    # Page router
+    # Page Router
     if page == "Quiz":
         quiz_flow()
 
@@ -142,5 +149,6 @@ def main():
         render_revision_mode()
 
 
-if __name__ == "__main__":
-    main()
+# --------------------------- RUN APP ----------------------------
+
+main()
