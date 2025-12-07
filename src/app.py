@@ -9,83 +9,95 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 
-# ---------------------- SESSION SETUP ----------------------
+
+# ---------------------- SESSION INIT ----------------------
 
 def init_state():
-    if "mode" not in st.session_state:
-        st.session_state.mode = None
-    if "subject" not in st.session_state:
-        st.session_state.subject = None
-    if "engine" not in st.session_state:
-        st.session_state.engine = None
-    if "answered" not in st.session_state:
-        st.session_state.answered = False
+    defaults = {
+        "mode": None,
+        "subject": None,
+        "engine": None,
+        "answered": False,
+        "adhd_profile": "balanced",
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
 
-# ---------------------- SIDEBAR ----------------------
+# ---------------------- SIDEBAR NAV ----------------------
 
 def sidebar_nav():
-    if st.sidebar.button("🔁 Reset All"):
+    if st.sidebar.button("🔁 Reset All", key="reset_all"):
         st.session_state.clear()
         st.rerun()
 
-    return st.sidebar.radio(
+    page = st.sidebar.radio(
         "📍 Navigation",
         ["Quiz", "Dashboard", "Revision"],
-        index=0
+        index=0,
+        key="nav",
     )
+    return page
 
 
-# ---------------------- QUIZ FLOW ----------------------
+# ---------------------- QUIZ PAGE ----------------------
 
 def quiz_page():
-
-    # Step 1: Choose learning mode
+    # Step 1: mode
     if not st.session_state.mode:
         render_mode_selection()
         return
 
-    # Step 2: Choose subject
+    # Step 2: subject
     if not st.session_state.subject:
         render_subject_selection()
         return
 
-    # Step 3: Create engine once
+    # Step 3: engine
     if st.session_state.engine is None:
         st.session_state.engine = QuizEngine(st.session_state.mode, st.session_state.subject)
 
-    engine = st.session_state.engine
+    engine: QuizEngine = st.session_state.engine
     question = engine.get_current_question()
 
-    # Step 4: end of quiz
+    # No more questions
     if question is None:
         render_results(engine)
         return
 
-    # Step 5: show question
     selected, _ = render_question(question, engine)
 
-    # Step 6: submit answer
+    # Submit
     if not st.session_state.answered:
-        if st.button("Submit Answer"):
+        if st.button("Submit Answer", key=f"submit_{engine.index}"):
             result = engine.check_answer(selected)
             st.session_state.answered = True
 
+            # ADHD hybrid: update pacing profile
+            if st.session_state.mode == "adhd":
+                st.session_state.adhd_profile = engine.get_pacing_profile()
+
             if result["correct"]:
                 st.success(f"✔ Correct! +{result['points']} points")
+                # Kahoot-ish "wow" moment on streak
+                if engine.streak >= 3:
+                    st.balloons()
             else:
                 st.error(f"❌ Wrong — Correct: {result['correct_answer']}")
 
-            st.info(f"⏱ Time taken: {result['time']} seconds")
+            if result["time"] is not None:
+                st.info(f"⏱ Time taken: {result['time']} seconds")
+
             st.rerun()
 
-    # Step 7: next
+    # Next question
     else:
-        if st.button("Next ➜"):
+        if st.button("Next ➜", key=f"next_{engine.index}"):
             engine.next_question()
             st.session_state.answered = False
 
-            # Clear stored radio button value
+            # Clear stored answers for radio widgets
             for key in list(st.session_state.keys()):
                 if key.startswith("answer_"):
                     del st.session_state[key]
@@ -93,23 +105,24 @@ def quiz_page():
             st.rerun()
 
 
-# ---------------------- REVISION ----------------------
+# ---------------------- REVISION PAGE ----------------------
 
 def revision_page():
     st.title("🔁 Review Mistakes")
 
-    if not st.session_state.engine or not st.session_state.engine.history:
-        st.warning("Take a quiz first.")
+    engine: QuizEngine | None = st.session_state.engine
+    if not engine or not engine.history:
+        st.warning("Take a quiz first to see mistakes.")
         return
 
-    wrong = [q for q in st.session_state.engine.history if not q["correct"]]
+    mistakes = [row for row in engine.history if not row["correct"]]
 
-    if not wrong:
-        st.success("🎉 No mistakes — you're amazing!")
+    if not mistakes:
+        st.success("🎉 No mistakes — excellent work!")
         return
 
-    for q in wrong:
-        st.write(f"❌ {q['question']} → Correct: **{q['correct_answer']}**")
+    for m in mistakes:
+        st.write(f"❌ {m['question']} → Correct: **{m['correct_answer']}**")
 
 
 # ---------------------- MAIN ----------------------
@@ -127,7 +140,7 @@ def main():
         if st.session_state.engine:
             render_dashboard(st.session_state.engine)
         else:
-            st.warning("📌 Take a quiz first to unlock analytics.")
+            st.warning("No quiz data yet. Take a quiz first.")
     elif page == "Revision":
         revision_page()
 
