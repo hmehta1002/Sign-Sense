@@ -6,18 +6,16 @@ def render_dashboard(engine):
     st.title("📊 Performance Dashboard")
 
     if not engine.history:
-        st.warning("Complete a quiz first to see analytics.")
+        st.warning("Take a quiz first.")
         return
 
     df = pd.DataFrame(engine.history)
 
-    st.metric("🏆 Total Score", engine.score)
-    st.metric("🔥 Best Streak", engine.best_streak)
+    st.metric("Score", engine.score)
+    st.metric("Best Streak", engine.best_streak)
 
-    # Accuracy Pie Chart
-    fig1 = px.pie(
-        df,
-        names=df.correct.map({True: "Correct", False: "Wrong"}),
-        title="Answer Accuracy"
-    )
-    st.plotly_chart(fig1, use_container_width=True)
+    pie = px.pie(df, names=df.correct.map({True: "Correct", False: "Wrong"}), title="Answer Accuracy")
+    st.plotly_chart(pie, use_container_width=True)
+
+    bar = px.bar(df, x="question", y="time_taken", title="Time per Question")
+    st.plotly_chart(bar, use_container_width=True)
