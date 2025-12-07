@@ -1,7 +1,6 @@
 import json
-import random
-import time
 import os
+import time
 
 
 class QuizEngine:
@@ -16,21 +15,22 @@ class QuizEngine:
         self.start_time = None
 
     def load_questions(self, subject):
-        base_path = os.path.join(os.path.dirname(__file__), "..", "data")
+        # Correct path for Streamlit Cloud & local usage
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
 
-        # Mapping subject to correct filenames
         filename_map = {
             "math": "questions_math.json",
-            "english": "questions_english.json"
+            "english": "questions_english.json",
         }
 
         if subject not in filename_map:
-            raise ValueError(f"Unknown subject: {subject}")
+            raise ValueError(f"❌ Unknown subject selected: {subject}")
 
-        filepath = os.path.join(base_path, filename_map[subject])
+        filename = filename_map[subject]
+        filepath = os.path.join(base_path, filename)
 
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Question file missing: {filepath}")
+            raise FileNotFoundError(f"❌ Question file missing at: {filepath}")
 
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -43,12 +43,10 @@ class QuizEngine:
 
     def check_answer(self, selected):
         question = self.questions[self.index]
-        correct = question["answer"] == selected
+        correct = (question["answer"] == selected)
 
-        # Calculate time
         time_taken = time.time() - self.start_time if self.start_time else None
 
-        # Score logic
         points = 10
         if correct:
             self.streak += 1
@@ -57,7 +55,6 @@ class QuizEngine:
         else:
             self.streak = 0
 
-        # Log history for revision
         self.history.append({
             "question_id": question["question"],
             "selected": selected,
@@ -69,9 +66,9 @@ class QuizEngine:
 
         return {
             "correct": correct,
-            "points": points,
             "correct_answer": question["answer"],
-            "time_taken": time_taken
+            "time_taken": time_taken,
+            "points": points
         }
 
     def next_question(self):
