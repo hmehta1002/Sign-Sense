@@ -14,26 +14,28 @@ class QuizEngine:
         self.start_time = None
 
     def load_questions(self, subject):
-        # Get absolute path of project root (works on Streamlit Cloud)
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_path = os.path.join(project_root, "data")
+        # Detect folder where this file lives
+        backend_folder = os.path.dirname(os.path.abspath(__file__))
 
+        # Mapping expected subject → filename
         filename_map = {
             "math": "questions_math.json",
-            "english": "questions_english.json",
+            "english": "questions_english.json"
         }
 
         if subject not in filename_map:
-            raise ValueError(f"Unknown subject selected: {subject}")
+            raise ValueError(f"Invalid subject: {subject}")
 
-        filepath = os.path.join(data_path, filename_map[subject])
+        filepath = os.path.join(backend_folder, filename_map[subject])
 
+        # Ensure file exists
         if not os.path.exists(filepath):
             raise FileNotFoundError(
-                f"❌ Question file missing at: {filepath}\n"
-                f"📂 Expected files in /data:\n - questions_math.json\n - questions_english.json"
+                f"❌ Could not find: {filepath}\n"
+                "➡ Make sure the JSON files are placed inside src/backend/"
             )
 
+        # Load JSON file
         with open(filepath, "r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -46,7 +48,12 @@ class QuizEngine:
     def check_answer(self, selected):
         question = self.questions[self.index]
         correct = (question["answer"] == selected)
-        time_taken = time.time() - self.start_time if self.start_time else None
+
+        time_taken = (
+            time.time() - self.start_time
+            if self.start_time is not None
+            else None
+        )
 
         points = 10
         if correct:
@@ -56,6 +63,7 @@ class QuizEngine:
         else:
             self.streak = 0
 
+        # save result for revision + analytics
         self.history.append({
             "question_id": question["question"],
             "selected": selected,
@@ -80,3 +88,4 @@ class QuizEngine:
         self.score = 0
         self.streak = 0
         self.history = []
+
