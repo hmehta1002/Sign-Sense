@@ -1,145 +1,72 @@
 import json
-import os
 import time
+import random
+from pathlib import Path
 
 
 class QuizEngine:
-    """
-    Core quiz logic:
-    - Loads questions from questions_<subject>.json in the same folder
-    - Tracks score, streak, best_streak, history
-    - Tracks response times for ADHD hybrid pacing
-    """
-
     def __init__(self, mode: str, subject: str):
-        self.mode = (mode or "standard").lower().strip()
-        self.subject = (subject or "math").lower().strip()
+        self.mode = mode
+        self.subject = subject
 
-        self.questions = self.load_questions()
-
-        self.index = 0
+        self.current_index = 0
         self.score = 0
         self.streak = 0
         self.best_streak = 0
         self.history = []
-        self.start_time = None
-        self.times = []  # store time per question for pacing profile
+        self.start_time = time.time()
 
-    # -------------------- DATA LOADING --------------------
+        self.questions = self.load_questions(subject)
 
-    def load_questions(self):
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        filename = f"questions_{self.subject}.json"
-        filepath = os.path.join(backend_dir, filename)
+    def load_questions(self, subject: str):
+        file_map = {
+            "English": "questions_english.json",
+            "Mathematics": "questions_math.json"
+        }
 
-        if not os.path.exists(filepath):
-            raise FileNotFoundError(
-                f"Question file not found: {filepath}. "
-                "Make sure questions_math.json and questions_english.json "
-                "are placed inside src/backend/."
-            )
+        filename = file_map.get(subject)
+        filepath = Path(__file__).parent.parent.parent / "data" / filename
 
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        if not filepath.exists():
+            raise FileNotFoundError(f"❌ Missing questions file: {filepath}")
 
-        if not isinstance(data, list):
-            raise ValueError("Question file must contain a JSON array of question objects.")
-
-        return data
-
-    # -------------------- QUIZ FLOW --------------------
+        with open(filepath, "r") as f:
+            return json.load(f)
 
     def get_current_question(self):
-        if self.index < len(self.questions):
-            self.start_time = time.time()
-            return self.questions[self.index]
-        return None
+        if self.current_index >= len(self.questions):
+            return None
+        return self.questions[self.current_index]
 
-    def check_answer(self, selected: str):
-        q = self.questions[self.index]
-        correct_answer = q["answer"]
-        correct = (selected == correct_answer)
+    def check_answer(self, user_answer: str):
+        q = self.get_current_question()
+        correct = (user_answer == q["answer"])
 
-        # Time taken
-        if self.start_time is not None:
-            time_taken = round(time.time() - self.start_time, 2)
-        else:
-            time_taken = None
-
-        # Store for ADHD pacing
-        if time_taken is not None:
-            self.times.append(time_taken)
-
-        # Scoring (Kahoot-ish: base + streak + speed bonus)
-        base_points = 10
-        speed_bonus = 0
-        if time_taken is not None:
-            if time_taken <= 5:
-                speed_bonus = 5
-            elif time_taken <= 10:
-                speed_bonus = 2
+        time_taken = time.time() - self.start_time
+        base_points = 100
 
         if correct:
             self.streak += 1
-            if self.streak > self.best_streak:
-                self.best_streak = self.streak
-            points = base_points + self.streak * 2 + speed_bonus
+            points = base_points + max(0, 50 - int(time_taken * 2))
             self.score += points
         else:
             self.streak = 0
             points = 0
 
-        entry = {
-            "id": q.get("id"),
+        self.best_streak = max(self.best_streak, self.streak)
+
+        self.history.append({
+            "id": q["id"],
             "question": q["question"],
-            "selected": selected,
+            "difficulty": q["difficulty"],
             "correct": correct,
-            "correct_answer": correct_answer,
-            "difficulty": q.get("difficulty", "unknown"),
-            "time_taken": time_taken,
-            "points": points,
-            "mode": self.mode,
-            "subject": self.subject,
-        }
+            "user_answer": user_answer,
+            "correct_answer": q["answer"],
+            "time_taken": round(time_taken, 2)
+        })
 
-        self.history.append(entry)
-
-        return {
-            "correct": correct,
-            "correct_answer": correct_answer,
-            "time": time_taken,
-            "points": points,
-        }
+        self.start_time = time.time()
+        return {"correct": correct, "points": points, "correct_answer": q["answer"]}
 
     def next_question(self):
-        self.index += 1
-
-    def reset(self):
-        self.index = 0
-        self.score = 0
-        self.streak = 0
-        self.best_streak = 0
-        self.history = []
-        self.start_time = None
-        self.times = []
-
-    # -------------------- ADHD HYBRID PROFILE --------------------
-
-    def get_pacing_profile(self) -> str:
-        """
-        Returns 'fast', 'calm', or 'balanced' based on recent response times.
-        Only meaningful in ADHD mode, but safe to call always.
-        """
-        if self.mode != "adhd" or not self.times:
-            return "balanced"
-
-        # Use last 5 questions to compute profile
-        recent = self.times[-5:]
-        avg = sum(recent) / len(recent)
-
-        if avg <= 5:
-            return "fast"
-        elif avg >= 12:
-            return "calm"
-        else:
-            return "balanced"
+        self.current_index += 1
