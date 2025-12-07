@@ -1,134 +1,113 @@
 import streamlit as st
-from frontend.ui import (
-    render_header,
-    render_mode_selection,
-    render_subject_selection,
-    render_question,
-    render_results,
-)
+from frontend.ui import render_header, render_mode_selection, render_subject_selection, render_question, render_results
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 
 
-# ---------------------- SESSION SETUP ----------------------
-
-def init_session():
-    defaults = {
-        "engine": None,
-        "mode": None,
-        "subject": None,
-        "answered": False
-    }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+def init_state():
+    if "mode" not in st.session_state:
+        st.session_state.mode = None
+    if "subject" not in st.session_state:
+        st.session_state.subject = None
+    if "engine" not in st.session_state:
+        st.session_state.engine = None
+    if "answered" not in st.session_state:
+        st.session_state.answered = False
 
 
-# ---------------------- QUIZ FLOW ----------------------
+def sidebar_nav():
+    if st.sidebar.button("🔁 Reset All"):
+        st.session_state.clear()
+        st.rerun()
 
-def quiz_flow():
+    return st.sidebar.radio("📍 Menu", ["Quiz", "Dashboard", "Revision"], index=0)
 
-    # Step 1 → Select mode
+
+def quiz_page():
+
+    # Step 1: select mode
     if not st.session_state.mode:
         render_mode_selection()
         return
 
-    # Step 2 → Select subject
+    # Step 2: select subject
     if not st.session_state.subject:
         render_subject_selection()
         return
 
-    # Step 3 → Create quiz engine if not created
+    # Step 3: create engine once
     if st.session_state.engine is None:
         st.session_state.engine = QuizEngine(st.session_state.mode, st.session_state.subject)
 
     engine = st.session_state.engine
     question = engine.get_current_question()
 
-    # Step 4 → End of quiz
+    # Step 4: end of quiz
     if question is None:
         render_results(engine)
         return
 
-    # Step 5 → Render question
-    selected, _ = render_question(question, engine, st.session_state.mode)
+    # Step 5: show question
+    selected, _ = render_question(question, engine)
 
-    # Step 6 → Submit answer
+    # Submit
     if not st.session_state.answered:
-        if st.button("Submit Answer", key=f"submit_{engine.index}"):
+        if st.button("Submit Answer"):
             result = engine.check_answer(selected)
             st.session_state.answered = True
 
             if result["correct"]:
-                st.success(f"🎉 Correct! +{result['points']} pts")
+                st.success("✔ Correct!")
             else:
-                st.error(f"❌ Wrong. Correct: {result['correct_answer']}")
+                st.error(f"❌ Wrong — Correct: {result['correct_answer']}")
 
-            st.info(f"⏱ Time: {result['time']} sec")
-            st.experimental_rerun()
+            st.info(f"Time taken: {result['time']} seconds")
 
-    # Step 7 → Next Question button only after answering
+            st.rerun()
+
+    # Next question
     else:
-        if st.button("Next ➜", key=f"next_{engine.index}"):
+        if st.button("Next ➜"):
             engine.next_question()
             st.session_state.answered = False
-            st.experimental_rerun()
+            st.rerun()
 
 
-# ---------------------- SIDEBAR NAVIGATION ----------------------
-
-def sidebar_nav():
-    if st.sidebar.button("🔁 Reset", key="reset"):
-        for k in list(st.session_state.keys()):
-            del st.session_state[k]
-        st.experimental_rerun()
-
-    return st.sidebar.radio(
-        "📍 Navigation",
-        ["Quiz", "Dashboard", "Revision Mode"],
-        key="nav"
-    )
-
-
-# ---------------------- REVISION MODE ----------------------
-
-def revision_mode():
-    st.title("🔁 Review Mistakes")
+def revision_page():
+    st.title("🔁 Revision Mode")
 
     if not st.session_state.engine or not st.session_state.engine.history:
-        st.warning("Take a quiz first before reviewing mistakes.")
+        st.warning("Complete a quiz first.")
         return
 
-    mistakes = [entry for entry in st.session_state.engine.history if not entry["correct"]]
+    wrong = [x for x in st.session_state.engine.history if not x["correct"]]
 
-    if not mistakes:
-        st.success("🎉 No mistakes — awesome!")
+    if not wrong:
+        st.success("🎉 You got everything correct!")
         return
 
-    for m in mistakes:
-        st.write(f"❌ {m['question']} — Correct: **{m['correct_answer']}**")
+    for q in wrong:
+        st.write(f"❌ {q['question']} → Correct: **{q['correct_answer']}**")
 
-
-# ---------------------- MAIN APP ----------------------
 
 def main():
     st.set_page_config(page_title="SignSense", page_icon="🧠", layout="wide")
 
-    init_session()
+    init_state()
+
     render_header()
+
     page = sidebar_nav()
 
     if page == "Quiz":
-        quiz_flow()
-
+        quiz_page()
     elif page == "Dashboard":
         if st.session_state.engine:
             render_dashboard(st.session_state.engine)
         else:
-            st.warning("⚠️ No quiz data yet — take a quiz first.")
-
-    elif page == "Revision Mode":
-        revision_mode()
+            st.warning("Take a quiz first.")
+    elif page == "Revision":
+        revision_page()
 
 
 if __name__ == "__main__":
