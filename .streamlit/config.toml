@@ -1,1 +1,12 @@
+[server]
+headless = true
+
+[theme]
+primaryColor="#7b2ff7"
+backgroundColor="#000212"
+secondaryBackgroundColor="#111833"
+textColor="#ffffff"
+
+[runner]
+magicEnabled = true
 
