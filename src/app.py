@@ -93,9 +93,10 @@ def sidebar_nav():
         "Go to:",
         ["Quiz", "Dashboard"],
         index=0,
-        key="nav_page",
+        key="nav_page"
     )
     return page
+
 
 
 # ---------- MAIN ----------
