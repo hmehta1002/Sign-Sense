@@ -7,41 +7,47 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 
 
-# ---------------- Session Setup ---------------- #
+# ----------- INITIALIZATION -----------
 
-def initialize_state():
-    defaults = {
-        "mode": None,
-        "subject": None,
-        "engine": None,
-        "page": "home",
-        "answered": False,
-        "user_answer": None
-    }
-    for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+def init_state():
+    if "mode" not in st.session_state: st.session_state.mode = None
+    if "subject" not in st.session_state: st.session_state.subject = None
+    if "engine" not in st.session_state: st.session_state.engine = None
+    if "page" not in st.session_state: st.session_state.page = "home"
+    if "answered" not in st.session_state: st.session_state.answered = False
+    if "user_answer" not in st.session_state: st.session_state.user_answer = None
 
 
-def reset_quiz():
-    st.session_state.mode = None
-    st.session_state.subject = None
-    st.session_state.engine = None
-    st.session_state.page = "home"
-    st.session_state.answered = False
-    st.session_state.user_answer = None
+def reset_app():
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    init_state()
 
 
-# ---------------- App UI Logic ---------------- #
+# ----------- QUIZ SECTION -----------
 
-def quiz_page():
-    engine = st.session_state.engine
+def quiz_flow():
+    engine: QuizEngine = st.session_state.engine
+    q = engine.get_current_question()
 
-    question = engine.get_current_question()
-    total = len(engine.questions)
-    index = engine.current_index + 1
+    if q is None:
+        render_results(engine)
+        if st.button("🔄 Restart Quiz"):
+            reset_app()
+            st.experimental_rerun()
+        return
 
-    st.write(f"📘 **Question {index}/{total}**")
+    # Render question
+    user_answer = render_question(
+        q, st.session_state.mode, engine.current_index + 1, len(engine.questions)
+    )
 
+    # Show Submit button only if not answered
     if not st.session_state.answered:
-        st.session_state.user
+        if st.button("Submit Answer"):
+            st.session_state.user_answer = user_answer
+            st.session_state.feedback = engine.check_answer(user_answer)
+            st.session_state.answered = True
+            st.experimental_rerun()
+
+    # After answer
