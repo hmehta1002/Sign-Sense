@@ -180,7 +180,7 @@ def render_subject_picker():
             "English ✍️": "english",
         }
         st.session_state.subject = mapping[choice]
-        st.experimental_rerun()
+        # NO rerun — main() will naturally continue
 
 
 # ---------- TTS HELPER ----------
