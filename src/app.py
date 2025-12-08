@@ -7,54 +7,41 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 
 
-def main():
-    st.set_page_config(page_title="SignSense", layout="wide")
+# ---------------- Session Setup ---------------- #
 
-    if "mode" not in st.session_state:
-        st.session_state.mode = None
-    if "subject" not in st.session_state:
-        st.session_state.subject = None
-    if "engine" not in st.session_state:
-        st.session_state.engine = None
+def initialize_state():
+    defaults = {
+        "mode": None,
+        "subject": None,
+        "engine": None,
+        "page": "home",
+        "answered": False,
+        "user_answer": None
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
-    if st.sidebar.button("🔁 Reset"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.experimental_rerun()
 
-    if not st.session_state.mode:
-        st.session_state.mode = render_mode_selection()
-        return
+def reset_quiz():
+    st.session_state.mode = None
+    st.session_state.subject = None
+    st.session_state.engine = None
+    st.session_state.page = "home"
+    st.session_state.answered = False
+    st.session_state.user_answer = None
 
-    render_header(st.session_state.mode)
 
-    if not st.session_state.subject:
-        st.session_state.subject = render_subject_selection()
-        return
+# ---------------- App UI Logic ---------------- #
 
-    if st.session_state.engine is None:
-        st.session_state.engine = QuizEngine(st.session_state.mode, st.session_state.subject)
-
+def quiz_page():
     engine = st.session_state.engine
-    q = engine.get_current_question()
 
-    if q is None:
-        render_results(engine)
-        return
+    question = engine.get_current_question()
+    total = len(engine.questions)
+    index = engine.current_index + 1
 
-    selected = render_question(q, st.session_state.mode, engine.current_index + 1, len(engine.questions))
+    st.write(f"📘 **Question {index}/{total}**")
 
-    if st.button("Submit"):
-        engine.check_answer(selected)
-        engine.next_question()
-        st.experimental_rerun()
-
-    st.sidebar.write("📍 Navigation")
-    nav = st.sidebar.radio("",["Quiz","Dashboard"])
-
-    if nav == "Dashboard":
-        render_dashboard(engine)
-
-
-if __name__ == "__main__":
-    main()
+    if not st.session_state.answered:
+        st.session_state.user
