@@ -1,6 +1,6 @@
 import streamlit as st
 
-# Optional TTS – app still runs if this fails
+# Optional TTS – safe if not installed
 try:
     from gtts import gTTS  # type: ignore
     TTS_AVAILABLE = True
@@ -8,12 +8,22 @@ except Exception:
     TTS_AVAILABLE = False
 
 
+# ---------- AVATAR CONFIG (realistic placeholders) ----------
+
+AVATAR_URLS = {
+    "standard": "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg",
+    "dyslexia": "https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg",
+    "adhd": "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg",
+    "isl": "https://images.pexels.com/photos/1557213/pexels-photo-1557213.jpeg",
+}
+
+
 # ---------- THEME ----------
 
 def apply_theme():
     mode = st.session_state.get("mode", "standard")
 
-    # Base neon
+    # Base theme
     st.markdown("""
     <style>
     body {
@@ -45,7 +55,7 @@ def apply_theme():
     </style>
     """, unsafe_allow_html=True)
 
-    # Mode-specific tweaks
+    # Per-mode tweaks
     if mode == "standard":
         st.markdown("""
         <style>
@@ -54,13 +64,12 @@ def apply_theme():
         }
         </style>
         """, unsafe_allow_html=True)
-
     elif mode == "dyslexia":
         st.markdown("""
         <style>
         * {
             font-family: Arial, sans-serif !important;
-            letter-spacing: 1.35px;
+            letter-spacing: 1.3px;
             line-height: 1.6em;
         }
         .stButton>button {
@@ -68,7 +77,6 @@ def apply_theme():
         }
         </style>
         """, unsafe_allow_html=True)
-
     elif mode == "adhd":
         st.markdown("""
         <style>
@@ -83,7 +91,6 @@ def apply_theme():
         }
         </style>
         """, unsafe_allow_html=True)
-
     elif mode == "isl":
         st.markdown("""
         <style>
@@ -100,7 +107,7 @@ def apply_theme():
         """, unsafe_allow_html=True)
 
 
-# ---------- HEADER ----------
+# ---------- HEADER + AVATAR ----------
 
 def render_header(mode: str):
     apply_theme()
@@ -113,19 +120,27 @@ def render_header(mode: str):
     }
     pretty = labels.get(mode, mode)
 
-    st.markdown(
-        f"""
-        <h1 style='text-align:center;
-                   color:#9BE8FF;
-                   letter-spacing:0.18em;'>
-            SIGNSENSE
-        </h1>
-        <p style='text-align:center;color:#ffffffaa;'>
-            Mode: <b>{pretty}</b>
-        </p>
-        """,
-        unsafe_allow_html=True
-    )
+    col1, col2 = st.columns([1, 4])
+
+    with col1:
+        avatar_url = AVATAR_URLS.get(mode)
+        if avatar_url:
+            st.image(avatar_url, caption=pretty, use_column_width=True)
+
+    with col2:
+        st.markdown(
+            f"""
+            <h1 style='text-align:left;
+                       color:#9BE8FF;
+                       letter-spacing:0.12em;'>
+                SIGNSENSE
+            </h1>
+            <p style='text-align:left;color:#ffffffaa;'>
+                Mode: <b>{pretty}</b> — neuro-inclusive AI quiz assistant
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
 
 
 # ---------- MODE & SUBJECT PICKERS ----------
@@ -196,7 +211,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
         unsafe_allow_html=True
     )
 
-    # ISL layout: show sign video/gif
+    # ISL: show GIF/video prominently
     if mode == "isl":
         col_v, col_t = st.columns([1.2, 2])
         with col_v:
@@ -213,7 +228,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
             "<span style='display:inline-block; padding:4px 10px; "
             "border-radius:999px; background:#ff980022; color:#ff9800; "
             "border:1px solid #ff980099; font-size:0.85em;'>"
-            "ADHD Hybrid Mode Active ⚡"
+            "ADHD Hybrid Focus Mode ⚡"
             "</span>",
             unsafe_allow_html=True
         )
