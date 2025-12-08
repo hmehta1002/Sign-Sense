@@ -6,53 +6,72 @@ from pathlib import Path
 
 class QuizEngine:
     def __init__(self, mode: str, subject: str):
+        # mode: 'standard', 'dyslexia', 'adhd', 'isl'
+        # subject: 'math' or 'english'
         self.mode = mode
         self.subject = subject
 
-        self.current_index = 0  # IMPORTANT: main index
+        self.current_index = 0
         self.score = 0
         self.streak = 0
         self.best_streak = 0
         self.history = []
-        self.start_time = time.time()
+        self.start_time = None
 
-        self.questions = self.load_questions(subject)
-
-        # Shuffle questions for variety (like Kahoot)
+        self.questions = self.load_questions()
         random.shuffle(self.questions)
 
-    def load_questions(self, subject: str):
+    def load_questions(self):
         file_map = {
-            "English": "questions_english.json",
-            "Mathematics": "questions_math.json"
+            "math": "questions_math.json",
+            "english": "questions_english.json",
         }
+        filename = file_map.get(self.subject)
+        if not filename:
+            raise ValueError(f"Unknown subject: {self.subject}")
 
-        filename = file_map.get(subject)
-        filepath = Path(__file__).parent / filename
+        backend_dir = Path(__file__).parent
+        filepath = backend_dir / filename
 
         if not filepath.exists():
-            raise FileNotFoundError(f"❌ Missing questions file: {filepath}")
+            raise FileNotFoundError(f"❌ Questions file missing: {filepath}")
 
-        with open(filepath, "r") as f:
-            return json.load(f)
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if not isinstance(data, list):
+            raise ValueError("Questions file must contain a JSON list.")
+        return data
 
     def get_current_question(self):
-        """Return current question or None if quiz finished."""
         if self.current_index >= len(self.questions):
             return None
+        self.start_time = time.time()
         return self.questions[self.current_index]
 
     def check_answer(self, user_answer: str):
-        q = self.get_current_question()
+        q = self.questions[self.current_index]
         correct = (user_answer == q["answer"])
-        time_taken = time.time() - self.start_time
 
+        # Time taken
+        if self.start_time is not None:
+            time_taken = round(time.time() - self.start_time, 2)
+        else:
+            time_taken = None
+
+        # Scoring
         base_points = 100
-        time_bonus = max(0, 50 - int(time_taken * 2))
+        speed_bonus = 0
+        if time_taken is not None:
+            if time_taken <= 5:
+                speed_bonus = 50
+            elif time_taken <= 10:
+                speed_bonus = 20
 
         if correct:
             self.streak += 1
-            points = base_points + time_bonus + (self.streak * 20)
+            streak_bonus = self.streak * 10
+            points = base_points + streak_bonus + speed_bonus
             self.score += points
         else:
             self.streak = 0
@@ -60,22 +79,26 @@ class QuizEngine:
 
         self.best_streak = max(self.best_streak, self.streak)
 
-        self.history.append({
-            "id": q["id"],
+        record = {
+            "id": q.get("id"),
             "question": q["question"],
-            "difficulty": q["difficulty"],
+            "subject": self.subject,
+            "mode": self.mode,
+            "selected": user_answer,
             "correct": correct,
-            "user_answer": user_answer,
             "correct_answer": q["answer"],
-            "time_taken": round(time_taken, 2),
-            "points_earned": points
-        })
+            "difficulty": q.get("difficulty", "unknown"),
+            "time_taken": time_taken,
+            "points": points,
+        }
+        self.history.append(record)
 
-        self.start_time = time.time()
-
-        return {"correct": correct, "points": points, "correct_answer": q["answer"]}
+        return {
+            "correct": correct,
+            "points": points,
+            "correct_answer": q["answer"],
+            "time": time_taken,
+        }
 
     def next_question(self):
-        """Move to the next question."""
         self.current_index += 1
-
