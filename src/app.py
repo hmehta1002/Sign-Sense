@@ -10,21 +10,21 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 
 
-# ------------------------- SESSION CONTROL -------------------------
+# ------------------------- SESSION STATE -------------------------
 
 def init_state():
-    if "mode" not in st.session_state:
-        st.session_state.mode = None
-    if "subject" not in st.session_state:
-        st.session_state.subject = None
-    if "engine" not in st.session_state:
-        st.session_state.engine = None
-    if "answered" not in st.session_state:
-        st.session_state.answered = False
-    if "user_answer" not in st.session_state:
-        st.session_state.user_answer = None
-    if "page" not in st.session_state:
-        st.session_state.page = "quiz"
+    defaults = {
+        "mode": None,
+        "subject": None,
+        "engine": None,
+        "answered": False,
+        "user_answer": None,
+        "feedback": None,
+        "page": "quiz"
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
 
 def reset_all():
@@ -32,22 +32,21 @@ def reset_all():
         del st.session_state[key]
     init_state()
 
-
-# ------------------------- QUIZ HANDLER -------------------------
+# ------------------------- QUIZ LOGIC -------------------------
 
 def quiz_flow():
     engine: QuizEngine = st.session_state.engine
     question = engine.get_current_question()
 
+    # End of quiz
     if question is None:
         render_results(engine)
-
-        if st.button("🔄 Restart Quiz"):
+        if st.button("🔁 Restart Quiz"):
             reset_all()
             st.experimental_rerun()
         return
 
-    # Show question
+    # NORMAL QUESTION DISPLAY
     answer = render_question(
         question,
         st.session_state.mode,
@@ -55,7 +54,7 @@ def quiz_flow():
         len(engine.questions)
     )
 
-    # Submit button
+    # SUBMIT ANSWER
     if not st.session_state.answered:
         if st.button("Submit Answer"):
             st.session_state.user_answer = answer
@@ -63,14 +62,40 @@ def quiz_flow():
             st.session_state.answered = True
             st.experimental_rerun()
 
-    # After answer: show feedback + next/back controls
+    # AFTER ANSWERING — SHOW FEEDBACK + CONTROLS
     if st.session_state.answered:
-        feedback = st.session_state.feedback
-        if feedback["correct"]:
-            st.success(f"✔ Correct! +{feedback['points']} points")
+        fb = st.session_state.feedback
+
+        if fb["correct"]:
+            st.success(f"✔ Correct! +{fb['points']} points")
         else:
-            st.error(f"❌ Incorrect — Correct answer: **{feedback['correct_answer']}**")
+            st.error(f"❌ Incorrect — Correct: **{fb['correct_answer']}**")
 
         col1, col2 = st.columns(2)
 
-        with col
+        with col1:
+            if st.button("⬅ Previous"):
+                if engine.current_index > 0:
+                    engine.current_index -= 1
+                st.session_state.answered = False
+                st.experimental_rerun()
+
+        with col2:
+            if st.button("Next ➡"):
+                engine.next_question()
+                st.session_state.answered = False
+                st.experimental_rerun()
+# ------------------------- NAVIGATION -------------------------
+
+def sidebar():
+    st.sidebar.title("📍 Menu")
+
+    if st.sidebar.button("🔁 Reset App"):
+        reset_all()
+        st.experimental_rerun()
+
+    return st.sidebar.radio(
+        "Go to:",
+        ["Quiz", "Performance Dashboard"]
+    )
+
