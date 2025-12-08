@@ -10,15 +10,15 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 
 
-# ---------- STATE ----------
+# ---------- SESSION STATE ----------
 
 def init_state():
     defaults = {
-        "mode": None,
-        "subject": None,
-        "engine": None,
-        "answered": False,
-        "feedback": None,
+        "mode": None,        # 'standard', 'dyslexia', 'adhd', 'isl'
+        "subject": None,     # 'math' or 'english'
+        "engine": None,      # QuizEngine instance
+        "answered": False,   # whether current question has been submitted
+        "feedback": None,    # last question feedback dict
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -26,6 +26,7 @@ def init_state():
 
 
 def reset_app():
+    """Clear everything and re-init."""
     for k in list(st.session_state.keys()):
         del st.session_state[k]
     init_state()
@@ -37,7 +38,7 @@ def quiz_flow():
     engine: QuizEngine = st.session_state.engine
     q = engine.get_current_question()
 
-    # Finished quiz
+    # End of quiz
     if q is None:
         render_results(engine)
         if st.button("🔁 Restart Quiz"):
@@ -48,10 +49,10 @@ def quiz_flow():
     total = len(engine.questions)
     idx = engine.current_index + 1
 
-    # Render the current question
+    # Render question UI
     answer = render_question(q, st.session_state.mode, idx, total)
 
-    # First phase: wait for submit
+    # Phase 1: waiting for submit
     if not st.session_state.answered:
         if st.button("Submit Answer"):
             fb = engine.check_answer(answer)
@@ -59,18 +60,17 @@ def quiz_flow():
             st.session_state.answered = True
             st.experimental_rerun()
     else:
-        # Show feedback
+        # Phase 2: show feedback + Next button
         fb = st.session_state.feedback
 
         if fb["correct"]:
             st.success(f"✔ Correct! +{fb['points']} points")
         else:
-            st.error(f"❌ Incorrect — correct: **{fb['correct_answer']}**")
+            st.error(f"❌ Incorrect — correct answer: **{fb['correct_answer']}**")
 
         if fb["time"] is not None:
-            st.info(f"⏱ Time taken: {fb['time']} sec")
+            st.info(f"⏱ Time taken: {fb['time']} seconds")
 
-        # Move to next question
         if st.button("Next ➡"):
             engine.next_question()
             st.session_state.answered = False
@@ -90,7 +90,7 @@ def sidebar_nav():
         "Go to:",
         ["Quiz", "Dashboard"],
         index=0,
-        key="nav_page"
+        key="nav_page",
     )
     return page
 
@@ -103,27 +103,27 @@ def main():
 
     page = sidebar_nav()
 
-    # Step 1: mode
+    # Step 1: pick mode
     if st.session_state.mode is None:
         render_mode_picker()
         return
 
-    # Step 2: subject
+    # Step 2: pick subject
     if st.session_state.subject is None:
         render_subject_picker()
         return
 
-    # Step 3: engine
+    # Step 3: create engine
     if st.session_state.engine is None:
         st.session_state.engine = QuizEngine(
             st.session_state.mode,
-            st.session_state.subject
+            st.session_state.subject,
         )
 
-    # Header
+    # Header (with avatar + mode visuals)
     render_header(st.session_state.mode)
 
-    # Route page
+    # Route
     if page == "Quiz":
         quiz_flow()
     else:
