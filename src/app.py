@@ -85,17 +85,17 @@ def quiz_flow():
 def sidebar_nav():
     st.sidebar.title("📍 Navigation")
 
+    # Reset app without forcing infinite rerun
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
-        st.experimental_rerun()
+        return "Quiz"  # send user back to start
 
-    page = st.sidebar.radio(
+    return st.sidebar.radio(
         "Go to:",
         ["Quiz", "Dashboard"],
         index=0,
         key="nav_page"
     )
-    return page
 
 
 
