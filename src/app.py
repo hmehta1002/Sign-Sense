@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="SignSense", layout="wide")  # MUST stay first
+st.set_page_config(page_title="SignSense", layout="wide")
 
 from backend.logic import QuizEngine
 from frontend.ui import (
@@ -7,21 +7,18 @@ from frontend.ui import (
     render_mode_picker,
     render_subject_picker,
     render_question,
-    render_results,
+    render_results
 )
 from frontend.dashboard import render_dashboard
 
 
-
-# ---------- SESSION STATE ----------
-
 def init_state():
     defaults = {
-        "mode": None,        # 'standard', 'dyslexia', 'adhd', 'isl'
-        "subject": None,     # 'math' or 'english'
-        "engine": None,      # QuizEngine instance
-        "answered": False,   # whether current question has been submitted
-        "feedback": None,    # last question feedback dict
+        "mode": None,
+        "subject": None,
+        "engine": None,
+        "answered": False,
+        "feedback": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -29,105 +26,78 @@ def init_state():
 
 
 def reset_app():
-    """Clear everything and re-init."""
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     init_state()
 
 
-# ---------- QUIZ FLOW ----------
+def sidebar():
+    st.sidebar.title("📍 Navigation")
+
+    if st.sidebar.button("🔁 Reset App"):
+        reset_app()
+
+    return st.sidebar.radio("Go to:", ["Quiz", "Dashboard"])
+
 
 def quiz_flow():
     engine: QuizEngine = st.session_state.engine
     q = engine.get_current_question()
 
-    # End of quiz
     if q is None:
         render_results(engine)
         if st.button("🔁 Restart Quiz"):
             reset_app()
-            st.experimental_rerun()
         return
 
-    total = len(engine.questions)
-    idx = engine.current_index + 1
+    answer = render_question(
+        q,
+        st.session_state.mode,
+        engine.current_index + 1,
+        len(engine.questions)
+    )
 
-    # Render question UI
-    answer = render_question(q, st.session_state.mode, idx, total)
-
-    # Phase 1: waiting for submit
     if not st.session_state.answered:
-        if st.button("Submit Answer"):
-            fb = engine.check_answer(answer)
-            st.session_state.feedback = fb
+        if st.button("Submit"):
+            st.session_state.feedback = engine.check_answer(answer)
             st.session_state.answered = True
-            st.experimental_rerun()
     else:
-        # Phase 2: show feedback + Next button
         fb = st.session_state.feedback
 
         if fb["correct"]:
-            st.success(f"✔ Correct! +{fb['points']} points")
+            st.success(f"✔ Correct! +{fb['points']} points 🎉")
         else:
-            st.error(f"❌ Incorrect — correct answer: **{fb['correct_answer']}**")
+            st.error(f"❌ Correct answer: {fb['correct_answer']}")
 
         if fb["time"] is not None:
-            st.info(f"⏱ Time taken: {fb['time']} seconds")
+            st.info(f"⏱ Time: {fb['time']} sec")
 
         if st.button("Next ➡"):
             engine.next_question()
             st.session_state.answered = False
-            st.experimental_rerun()
 
-
-# ---------- SIDEBAR NAV ----------
-
-def sidebar_nav():
-    st.sidebar.title("📍 Navigation")
-
-    # Reset app without forcing infinite rerun
-    if st.sidebar.button("🔁 Reset App"):
-        reset_app()
-        return "Quiz"  # send user back to start
-
-    return st.sidebar.radio(
-        "Go to:",
-        ["Quiz", "Dashboard"],
-        index=0,
-        key="nav_page"
-    )
-
-
-
-# ---------- MAIN ----------
 
 def main():
-    st.set_page_config(page_title="SignSense", layout="wide")
     init_state()
 
-    page = sidebar_nav()
+    page = sidebar()
 
-    # Step 1: pick mode
     if st.session_state.mode is None:
         render_mode_picker()
         return
 
-    # Step 2: pick subject
     if st.session_state.subject is None:
         render_subject_picker()
         return
 
-    # Step 3: create engine
     if st.session_state.engine is None:
         st.session_state.engine = QuizEngine(
             st.session_state.mode,
-            st.session_state.subject,
+            st.session_state.subject
         )
 
-    # Header (with avatar + mode visuals)
     render_header(st.session_state.mode)
 
-    # Route
     if page == "Quiz":
         quiz_flow()
     else:
