@@ -2,8 +2,8 @@ import streamlit as st
 from backend.logic import QuizEngine
 from frontend.ui import (
     render_header,
-    render_mode_selection,
-    render_subject_selection,
+    render_mode_picker,
+    render_subject_picker,
     render_question,
     render_results,
 )
@@ -37,6 +37,7 @@ def quiz_flow():
     engine: QuizEngine = st.session_state.engine
     q = engine.get_current_question()
 
+    # Finished quiz
     if q is None:
         render_results(engine)
         if st.button("🔁 Restart Quiz"):
@@ -47,8 +48,10 @@ def quiz_flow():
     total = len(engine.questions)
     idx = engine.current_index + 1
 
+    # Render the current question
     answer = render_question(q, st.session_state.mode, idx, total)
 
+    # First phase: wait for submit
     if not st.session_state.answered:
         if st.button("Submit Answer"):
             fb = engine.check_answer(answer)
@@ -56,7 +59,9 @@ def quiz_flow():
             st.session_state.answered = True
             st.experimental_rerun()
     else:
+        # Show feedback
         fb = st.session_state.feedback
+
         if fb["correct"]:
             st.success(f"✔ Correct! +{fb['points']} points")
         else:
@@ -65,16 +70,18 @@ def quiz_flow():
         if fb["time"] is not None:
             st.info(f"⏱ Time taken: {fb['time']} sec")
 
+        # Move to next question
         if st.button("Next ➡"):
             engine.next_question()
             st.session_state.answered = False
             st.experimental_rerun()
 
 
-# ---------- SIDEBAR ----------
+# ---------- SIDEBAR NAV ----------
 
 def sidebar_nav():
     st.sidebar.title("📍 Navigation")
+
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
         st.experimental_rerun()
@@ -83,7 +90,7 @@ def sidebar_nav():
         "Go to:",
         ["Quiz", "Dashboard"],
         index=0,
-        key="page_nav"
+        key="nav_page"
     )
     return page
 
@@ -98,23 +105,25 @@ def main():
 
     # Step 1: mode
     if st.session_state.mode is None:
-        render_mode_selection()
+        render_mode_picker()
         return
 
     # Step 2: subject
     if st.session_state.subject is None:
-        render_subject_selection()
+        render_subject_picker()
         return
 
     # Step 3: engine
     if st.session_state.engine is None:
         st.session_state.engine = QuizEngine(
             st.session_state.mode,
-            st.session_state.subject,
+            st.session_state.subject
         )
 
+    # Header
     render_header(st.session_state.mode)
 
+    # Route page
     if page == "Quiz":
         quiz_flow()
     else:
