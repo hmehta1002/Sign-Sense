@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="SignSense", layout="wide")  # MUST stay first
+
 from backend.logic import QuizEngine
 from frontend.ui import (
     render_header,
@@ -8,6 +10,7 @@ from frontend.ui import (
     render_results,
 )
 from frontend.dashboard import render_dashboard
+
 
 
 # ---------- SESSION STATE ----------
