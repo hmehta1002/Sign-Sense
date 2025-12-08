@@ -1,10 +1,9 @@
 import sys
-import os
+import streamlit as st
 
-# Ensure src can be imported
-sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+# Ensure Python knows where to find the src folder
+sys.path.append("src")
 
-import app
+import app  # Imports src/app.py
 
-# Run the real UI
 app.main()
