@@ -1,6 +1,6 @@
 import streamlit as st
 
-# Optional TTS – app still works without it
+# Optional TTS – app still runs if this fails
 try:
     from gtts import gTTS  # type: ignore
     TTS_AVAILABLE = True
@@ -8,12 +8,12 @@ except Exception:
     TTS_AVAILABLE = False
 
 
-# ---------- MODE THEMING ----------
+# ---------- THEME ----------
 
 def apply_theme():
     mode = st.session_state.get("mode", "standard")
 
-    # Base neon style
+    # Base neon
     st.markdown("""
     <style>
     body {
@@ -45,7 +45,7 @@ def apply_theme():
     </style>
     """, unsafe_allow_html=True)
 
-    # Per-mode overrides
+    # Mode-specific tweaks
     if mode == "standard":
         st.markdown("""
         <style>
@@ -60,7 +60,7 @@ def apply_theme():
         <style>
         * {
             font-family: Arial, sans-serif !important;
-            letter-spacing: 1.3px;
+            letter-spacing: 1.35px;
             line-height: 1.6em;
         }
         .stButton>button {
@@ -104,12 +104,14 @@ def apply_theme():
 
 def render_header(mode: str):
     apply_theme()
-    pretty = {
+
+    labels = {
         "standard": "Standard",
         "dyslexia": "Dyslexia-Friendly",
         "adhd": "ADHD Hybrid",
         "isl": "Deaf / ISL",
-    }.get(mode, mode)
+    }
+    pretty = labels.get(mode, mode)
 
     st.markdown(
         f"""
@@ -128,45 +130,49 @@ def render_header(mode: str):
 
 # ---------- MODE & SUBJECT PICKERS ----------
 
-def render_mode_selection():
+def render_mode_picker():
     apply_theme()
     st.write("### 🧠 Choose Learning Mode")
-    val = st.radio(
+
+    choice = st.radio(
         "",
         ["Standard 🎯", "Dyslexia-Friendly 🔤", "ADHD Hybrid ⚡", "Deaf / ISL ✋"]
     )
-    if st.button("Continue ➜"):
+
+    if st.button("Continue ➜", key="mode_continue"):
         mapping = {
             "Standard 🎯": "standard",
             "Dyslexia-Friendly 🔤": "dyslexia",
             "ADHD Hybrid ⚡": "adhd",
             "Deaf / ISL ✋": "isl",
         }
-        st.session_state.mode = mapping[val]
+        st.session_state.mode = mapping[choice]
         st.experimental_rerun()
 
 
-def render_subject_selection():
+def render_subject_picker():
     apply_theme()
     st.write("### 📚 Choose Subject")
-    val = st.radio(
+
+    choice = st.radio(
         "",
         ["Mathematics 🧮", "English ✍️"]
     )
-    if st.button("Start Quiz 🚀"):
+
+    if st.button("Start Quiz 🚀", key="subject_start"):
         mapping = {
             "Mathematics 🧮": "math",
             "English ✍️": "english",
         }
-        st.session_state.subject = mapping[val]
+        st.session_state.subject = mapping[choice]
         st.experimental_rerun()
 
 
-# ---------- TTS ----------
+# ---------- TTS HELPER ----------
 
 def _play_tts(text: str, q_id: str):
     if not TTS_AVAILABLE:
-        st.warning("Text-to-speech not available in this deployment.")
+        st.warning("Text-to-speech is not available here.")
         return
     try:
         tts = gTTS(text)
@@ -177,7 +183,7 @@ def _play_tts(text: str, q_id: str):
         st.warning("Could not generate audio right now.")
 
 
-# ---------- QUESTION RENDERING ----------
+# ---------- QUESTION RENDER ----------
 
 def render_question(q: dict, mode: str, index: int, total: int):
     apply_theme()
@@ -190,7 +196,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
         unsafe_allow_html=True
     )
 
-    # ISL mode: show GIF/video if available
+    # ISL layout: show sign video/gif
     if mode == "isl":
         col_v, col_t = st.columns([1.2, 2])
         with col_v:
@@ -201,7 +207,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
         with col_t:
             st.write("")
 
-    # ADHD badge
+    # ADHD label
     if mode == "adhd":
         st.markdown(
             "<span style='display:inline-block; padding:4px 10px; "
@@ -212,15 +218,17 @@ def render_question(q: dict, mode: str, index: int, total: int):
             unsafe_allow_html=True
         )
 
+    # Answer choices
     key = f"answer_{q.get('id', index)}"
-    options = q["options"]
-    answer = st.radio("Choose your answer:", options, key=key)
+    answer = st.radio("Choose your answer:", q["options"], key=key)
 
+    # TTS for non-ISL
     if mode in ("standard", "dyslexia", "adhd"):
-        tts_label = q.get("tts_text", q["question"])
+        label = q.get("tts_text", q["question"])
         if st.button("🔊 Read aloud", key=f"tts_{q.get('id', index)}"):
-            _play_tts(tts_label, str(q.get("id", index)))
+            _play_tts(label, str(q.get('id', index)))
 
+    # Hints
     if q.get("hints") and st.checkbox("💡 Show Hint", key=f"hint_{q.get('id', index)}"):
         st.info(q["hints"][0])
 
@@ -232,5 +240,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
 def render_results(engine):
     apply_theme()
     st.success("🎉 Quiz Completed!")
+
     st.write(f"### Final Score: **{engine.score}**")
     st.write(f"Best Streak: **{engine.best_streak}**")
+    st.write(f"Total Questions: **{len(engine.questions)}**")
