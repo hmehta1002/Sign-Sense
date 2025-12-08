@@ -10,8 +10,9 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 
 
-# ------------------------- SESSION STATE -------------------------
-
+# ------------------------------------------------------------
+# SESSION INITIALIZATION
+# ------------------------------------------------------------
 def init_state():
     defaults = {
         "mode": None,
@@ -20,33 +21,35 @@ def init_state():
         "answered": False,
         "user_answer": None,
         "feedback": None,
-        "page": "quiz"
+        "page": "Quiz"
     }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            st.session_state[k] = v
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
-def reset_all():
+def reset_app():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     init_state()
 
-# ------------------------- QUIZ LOGIC -------------------------
 
+# ------------------------------------------------------------
+# QUIZ FLOW
+# ------------------------------------------------------------
 def quiz_flow():
-    engine: QuizEngine = st.session_state.engine
+    engine = st.session_state.engine
     question = engine.get_current_question()
 
     # End of quiz
     if question is None:
         render_results(engine)
         if st.button("🔁 Restart Quiz"):
-            reset_all()
+            reset_app()
             st.experimental_rerun()
         return
 
-    # NORMAL QUESTION DISPLAY
+    # Display UI for question
     answer = render_question(
         question,
         st.session_state.mode,
@@ -54,27 +57,27 @@ def quiz_flow():
         len(engine.questions)
     )
 
-    # SUBMIT ANSWER
+    # Submit logic
     if not st.session_state.answered:
-        if st.button("Submit Answer"):
-            st.session_state.user_answer = answer
+        if st.button("Submit"):
             st.session_state.feedback = engine.check_answer(answer)
+            st.session_state.user_answer = answer
             st.session_state.answered = True
             st.experimental_rerun()
 
-    # AFTER ANSWERING — SHOW FEEDBACK + CONTROLS
+    # After submission feedback
     if st.session_state.answered:
         fb = st.session_state.feedback
 
         if fb["correct"]:
-            st.success(f"✔ Correct! +{fb['points']} points")
+            st.success(f"✔ Correct! +{fb['points']} pts")
         else:
-            st.error(f"❌ Incorrect — Correct: **{fb['correct_answer']}**")
+            st.error(f"❌ Incorrect — Correct answer: **{fb['correct_answer']}**")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("⬅ Previous"):
+            if st.button("⬅ Previous Question"):
                 if engine.current_index > 0:
                     engine.current_index -= 1
                 st.session_state.answered = False
@@ -85,17 +88,64 @@ def quiz_flow():
                 engine.next_question()
                 st.session_state.answered = False
                 st.experimental_rerun()
-# ------------------------- NAVIGATION -------------------------
 
-def sidebar():
-    st.sidebar.title("📍 Menu")
+
+# ------------------------------------------------------------
+# SIDEBAR NAV
+# ------------------------------------------------------------
+def sidebar_menu():
+    st.sidebar.title("📍 Navigation")
 
     if st.sidebar.button("🔁 Reset App"):
-        reset_all()
+        reset_app()
         st.experimental_rerun()
 
     return st.sidebar.radio(
-        "Go to:",
+        "Choose Page:",
         ["Quiz", "Performance Dashboard"]
     )
 
+
+# ------------------------------------------------------------
+# MAIN APPLICATION
+# ------------------------------------------------------------
+def main():
+    st.set_page_config(page_title="SignSense", layout="wide")
+
+    init_state()
+
+    # Sidebar navigation
+    current_page = sidebar_menu()
+
+    # Step 1 — Mode selection
+    if st.session_state.mode is None:
+        st.session_state.mode = render_mode_selection()
+        return
+
+    # Step 2 — Subject selection
+    if st.session_state.subject is None:
+        st.session_state.subject = render_subject_selection()
+        return
+
+    # Step 3 — Initialize quiz engine once
+    if st.session_state.engine is None:
+        st.session_state.engine = QuizEngine(
+            st.session_state.mode,
+            st.session_state.subject
+        )
+
+    # Header
+    render_header(st.session_state.mode)
+
+    # Page control
+    if current_page == "Quiz":
+        quiz_flow()
+    else:
+        render_dashboard(st.session_state.engine)
+
+
+# ------------------------------------------------------------
+# REQUIRED ENTRY POINT
+# ------------------------------------------------------------
+if __name__ == "__main__":
+    main()
