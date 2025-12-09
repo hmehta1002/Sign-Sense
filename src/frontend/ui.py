@@ -8,7 +8,7 @@ except Exception:
     TTS_AVAILABLE = False
 
 
-# ---------- AVATARS (realistic style) ----------
+# ---------- AVATARS (realistic AI-style placeholders) ----------
 
 AVATAR_URLS = {
     "standard": "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg",
@@ -21,23 +21,22 @@ AVATAR_URLS = {
 # ---------- THEME + MODE VISUALS ----------
 
 def apply_theme():
-    """Base neon theme + per-mode overrides via CSS."""
+    """Base neon cyberpunk theme + per-mode CSS."""
     mode = st.session_state.get("mode", "standard")
 
-    # Base cyber background and question box styling
     st.markdown(
         """
         <style>
         body {
-            background: radial-gradient(circle at top, #101426 0, #02010f 55%, #000000 100%);
+            background: radial-gradient(circle at top, #13162b 0, #050316 55%, #000000 100%);
         }
         h1, h2, h3, label {
             color: #9BE8FF !important;
         }
         .question-box {
             padding: 16px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 12px;
+            background: rgba(10, 15, 40, 0.9);
+            border-radius: 14px;
             border: 1px solid #4dd2ff;
             margin-bottom: 16px;
             font-size: 18px;
@@ -53,15 +52,14 @@ def apply_theme():
             transition: all 0.15s ease-out;
         }
         .stButton>button:hover {
-            transform: translateY(-1px) scale(1.02);
-            box-shadow: 0 0 15px rgba(123,47,247,0.55);
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 0 18px rgba(123,47,247,0.75);
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Mode-specific tweaks
     if mode == "standard":
         st.markdown(
             """
@@ -114,7 +112,7 @@ def apply_theme():
                 background: #020818;
             }
             * {
-                font-size: 1.05em;
+                font-size: 1.04em;
             }
             .stButton>button {
                 background: #005f99;
@@ -125,40 +123,62 @@ def apply_theme():
         )
 
 
-# ---------- HEADER WITH AVATAR ----------
+# ---------- HEADER + AVATAR ----------
 
 def render_header(mode: str):
     apply_theme()
 
-    mode_label = {
+    labels = {
         "standard": "Standard Mode",
         "dyslexia": "Dyslexia-Friendly Mode",
         "adhd": "ADHD Hybrid Mode",
         "isl": "Deaf / ISL Mode",
-    }.get(mode, mode)
+    }
+    pretty = labels.get(mode, mode)
 
     col1, col2 = st.columns([1, 3])
 
     with col1:
         avatar = AVATAR_URLS.get(mode)
         if avatar:
-            st.image(avatar, caption=mode_label, use_column_width=True)
+            st.image(avatar, caption=pretty, use_column_width=True)
 
     with col2:
         st.markdown(
             """
-            <h1 style='color:#9BE8FF; letter-spacing:0.12em; margin-bottom:0.2em;'>
+            <h1 style='color:#9BE8FF; letter-spacing:0.14em; margin-bottom:0.2em;'>
                 SIGNSENSE
             </h1>
             <p style='color:#ffffffaa;'>
-                Neuro-inclusive AI quiz portal for ADHD, Dyslexia & Deaf learners.
+                Neuro-inclusive AI quiz for ADHD, Dyslexia & Deaf learners.
             </p>
             """,
             unsafe_allow_html=True,
         )
 
 
-# ---------- MODE SELECTION ----------
+# ---------- HUD (Score, Level, XP) ----------
+
+def render_hud(engine, xp_info: dict):
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Score", engine.score)
+    col2.metric("Best Streak", engine.best_streak)
+    col3.metric("Level", xp_info["level"])
+
+    xp = xp_info["xp"]
+    level = xp_info["level"]
+    next_level_xp = level * 200
+    base_level_xp = (level - 1) * 200
+    span = max(1, next_level_xp - base_level_xp)
+    progress = min(1.0, max(0.0, (xp - base_level_xp) / span))
+
+    st.progress(progress, text=f"XP {xp} / {next_level_xp}")
+
+    if xp_info["badges"]:
+        st.caption("Unlocked badges: " + " · ".join(xp_info["badges"]))
+
+
+# ---------- MODE & SUBJECT PICKERS ----------
 
 def render_mode_picker():
     apply_theme()
@@ -177,10 +197,7 @@ def render_mode_picker():
             "Deaf / ISL ✋": "isl",
         }
         st.session_state.mode = mapping[choice]
-        # NO rerun here; app.py main() will continue on next call
 
-
-# ---------- SUBJECT SELECTION ----------
 
 def render_subject_picker():
     apply_theme()
@@ -197,14 +214,13 @@ def render_subject_picker():
             "English ✍️": "english",
         }
         st.session_state.subject = mapping[choice]
-        # NO rerun here either; app.py main() continues naturally
 
 
 # ---------- TTS HELPER ----------
 
 def _play_tts(text: str, q_id: str):
     if not TTS_AVAILABLE:
-        st.warning("Text-to-speech is not available in this deployment.")
+        st.warning("Text-to-speech is not available here.")
         return
     try:
         tts = gTTS(text)
@@ -212,15 +228,14 @@ def _play_tts(text: str, q_id: str):
         tts.save(path)
         st.audio(path)
     except Exception:
-        st.warning("Unable to generate audio at the moment.")
+        st.warning("Unable to generate audio right now.")
 
 
-# ---------- QUESTION RENDERING ----------
+# ---------- QUESTION RENDER ----------
 
 def render_question(q: dict, mode: str, index: int, total: int):
     apply_theme()
 
-    # Question card
     st.markdown(
         f"""
         <div class="question-box">
@@ -231,7 +246,7 @@ def render_question(q: dict, mode: str, index: int, total: int):
         unsafe_allow_html=True,
     )
 
-    # ISL media panel
+    # ISL media
     if mode == "isl":
         col_v, col_t = st.columns([1.3, 2])
         with col_v:
@@ -240,9 +255,9 @@ def render_question(q: dict, mode: str, index: int, total: int):
             elif q.get("isl_gif"):
                 st.image(q["isl_gif"], caption="ISL Support")
         with col_t:
-            st.write("Watch the sign and choose the correct option.")
+            st.write("Watch the sign and pick the correct option.")
 
-    # ADHD visual badge
+    # ADHD badge
     if mode == "adhd":
         st.markdown(
             """
@@ -263,27 +278,33 @@ def render_question(q: dict, mode: str, index: int, total: int):
     key = f"answer_{q.get('id', index)}"
     answer = st.radio("Choose your answer:", q["options"], key=key)
 
-    # TTS button for non-ISL modes
+    # TTS for non-ISL modes
     if mode in ("standard", "dyslexia", "adhd"):
-        tts_label = q.get("tts_text", q["question"])
+        label = q.get("tts_text", q["question"])
         if st.button("🔊 Read question aloud", key=f"tts_{q.get('id', index)}"):
-            _play_tts(tts_label, str(q.get("id", index)))
+            _play_tts(label, str(q.get("id", index)))
 
-    # Hint section
+    # Hint
     if q.get("hints") and st.checkbox("💡 Show Hint", key=f"hint_{q.get('id', index)}"):
         st.info(q["hints"][0])
 
     return answer
 
 
-# ---------- RESULTS RENDERING ----------
+# ---------- RESULTS ----------
 
-def render_results(engine):
+def render_results(engine, xp_info: dict):
     apply_theme()
     st.success("🎉 Quiz Completed!")
 
     st.write(f"### Final Score: **{engine.score}**")
     st.write(f"Best Streak: **{engine.best_streak}**")
     st.write(f"Total Questions: **{len(engine.questions)}**")
+    st.write(f"XP Earned: **{xp_info['xp']}** (Level {xp_info['level']})")
+
+    if xp_info["badges"]:
+        st.write("🏅 **Badges Unlocked:**")
+        for b in xp_info["badges"]:
+            st.markdown(f"- {b}")
 
     st.balloons()
