@@ -1,12 +1,13 @@
-import os
 import sys
+from pathlib import Path
+import streamlit as st
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-SRC_DIR = os.path.join(ROOT_DIR, "src")
+# --- Ensure src/ is in Python path ---
+ROOT_DIR = Path(__file__).resolve().parent / "src"
+sys.path.append(str(ROOT_DIR))
 
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
+# --- Import main app router ---
+import app  # this now points to src/app.py
 
-import app  # src/app.py
-
-app.main()
+if __name__ == "__main__":
+    app.main()
