@@ -1,7 +1,12 @@
 import streamlit as st
 
-# -------- FIXED IMPORTS (DO NOT CHANGE) --------
-from frontend.ui import apply_theme, render_mode_picker, render_subject_picker, render_question_UI
+# ---------------- IMPORT FIXED (NO DOT PREFIXES) ----------------
+from frontend.ui import (
+    apply_theme,
+    render_mode_picker,
+    render_subject_picker,
+    render_question_UI,
+)
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
@@ -9,47 +14,46 @@ from live.live_sync import init_live_session, live_session_page
 from revision.revision_ui import render_revision_page
 
 
-# -------- RESET BUTTON --------
+# ---------------- RESET FUNCTION ----------------
 def reset_app():
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    st.rerun()
+    st.session_state.clear()
+    st.experimental_rerun()
 
 
-# -------- SIDEBAR NAVIGATION --------
+# ---------------- SIDEBAR NAV ----------------
 def sidebar_navigation():
     pages = {
         "📘 Solo Quiz": "solo",
         "🌐 Live Session": "live",
         "🔁 Revision Lab": "revision",
         "📊 Dashboard": "dashboard",
-        "🤖 Admin / AI Quiz": "admin_ai"
+        "🤖 Admin / AI Quiz": "admin_ai",
     }
-    return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
+    selection = st.sidebar.radio("Navigation", list(pages.keys()))
+    return pages[selection]
 
 
-# -------- ENSURE ENGINE EXISTS --------
+# ---------------- ENGINE CREATION ----------------
 def ensure_engine():
     if "engine" not in st.session_state:
-        if st.session_state.get("mode") and st.session_state.get("subject"):
-            st.session_state.engine = QuizEngine(
-                st.session_state.mode,
-                st.session_state.subject
-            )
+        mode = st.session_state.get("mode")
+        subject = st.session_state.get("subject")
+
+        if mode and subject:
+            st.session_state.engine = QuizEngine(mode, subject)
 
 
-# -------- SOLO QUIZ MODE --------
+# ---------------- SOLO QUIZ PAGE ----------------
 def solo_quiz_page():
-    engine: QuizEngine = st.session_state.engine
+    engine = st.session_state.engine
     question = engine.get_current_question()
 
-    # End of quiz
     if question is None:
-        st.success("🎉 Quiz Complete!")
+        st.success("🎉 You've completed the quiz!")
         st.balloons()
-        if st.button("📊 View Dashboard"):
+        if st.button("📊 View Your Dashboard"):
             st.session_state.page = "dashboard"
-            st.rerun()
+            st.experimental_rerun()
         return
 
     render_question_UI(question)
@@ -58,28 +62,25 @@ def solo_quiz_page():
     with col1:
         if engine.current_index > 0 and st.button("⬅ Back"):
             engine.current_index -= 1
-            st.rerun()
-
+            st.experimental_rerun()
     with col2:
         if st.button("Next ➜"):
             engine.next_question()
-            st.rerun()
+            st.experimental_rerun()
 
 
-# -------- MAIN APP --------
+# ---------------- MAIN APP ----------------
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
-
     apply_theme()
 
-    # Reset App
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
 
-    st.session_state.page = sidebar_navigation()
+    page = sidebar_navigation()
+    st.session_state.page = page
 
-    # ROUTING
-    if st.session_state.page == "solo":
+    if page == "solo":
         if "mode" not in st.session_state:
             render_mode_picker()
             return
@@ -91,21 +92,21 @@ def main():
         ensure_engine()
         solo_quiz_page()
 
-    elif st.session_state.page == "dashboard":
-        render_dashboard(st.session_state.get("engine"))
+    elif page == "dashboard":
+        render_dashboard(st.session_state.get("engine", None))
 
-    elif st.session_state.page == "revision":
-        render_revision_page(st.session_state.get("engine"))
+    elif page == "revision":
+        render_revision_page(st.session_state.get("engine", None))
 
-    elif st.session_state.page == "live":
+    elif page == "live":
         init_live_session()
-        live_session_page(st.session_state.get("engine"), {})
+        live_session_page(st.session_state.get("engine", None), {})
 
-    elif st.session_state.page == "admin_ai":
+    elif page == "admin_ai":
         ai_quiz_builder()
 
     else:
-        st.error("⚠ Unknown navigation state.")
+        st.error("⚠ Something went wrong — invalid page.")
 
 
 if __name__ == "__main__":
