@@ -1,6 +1,6 @@
 import streamlit as st
 
-# ---- FIXED IMPORTS (SINGLE LINE, NO INDENT ISSUES) ----
+# ---------------- FIXED IMPORTS ----------------
 from frontend.ui import apply_theme, render_mode_picker, render_subject_picker, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
@@ -8,13 +8,14 @@ from ai.ai_builder import ai_quiz_builder
 from live.live_sync import init_live_session, live_session_page
 from revision.revision_ui import render_revision_page
 
-# ---------------- RESET FUNCTION ----------------
+
+# ---------------- RESET ----------------
 def reset_app():
     st.session_state.clear()
     st.experimental_rerun()
 
 
-# ---------------- SIDEBAR NAV ----------------
+# ---------------- SIDEBAR NAVIGATION ----------------
 def sidebar_navigation():
     pages = {
         "📘 Solo Quiz": "solo",
@@ -27,7 +28,7 @@ def sidebar_navigation():
     return pages[selection]
 
 
-# ---------------- ENGINE CREATION ----------------
+# ---------------- CREATE ENGINE ----------------
 def ensure_engine():
     if "engine" not in st.session_state:
         mode = st.session_state.get("mode")
@@ -37,15 +38,17 @@ def ensure_engine():
             st.session_state.engine = QuizEngine(mode, subject)
 
 
-# ---------------- SOLO QUIZ PAGE ----------------
+# ---------------- SOLO QUIZ FLOW ----------------
 def solo_quiz_page():
-    engine = st.session_state.engine
+    engine: QuizEngine = st.session_state.engine
     question = engine.get_current_question()
 
+    # End of quiz
     if question is None:
-        st.success("🎉 You've completed the quiz!")
+        st.success("🎉 Quiz Complete!")
         st.balloons()
-        if st.button("📊 View Your Dashboard"):
+
+        if st.button("📊 View Dashboard"):
             st.session_state.page = "dashboard"
             st.experimental_rerun()
         return
@@ -57,18 +60,20 @@ def solo_quiz_page():
         if engine.current_index > 0 and st.button("⬅ Back"):
             engine.current_index -= 1
             st.experimental_rerun()
+
     with col2:
         if st.button("Next ➜"):
             engine.next_question()
             st.experimental_rerun()
 
 
-# ---------------- MAIN APP ----------------
+# ---------------- MAIN ----------------
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
+
     apply_theme()
 
-    if st.sidebar.button("🔁 Reset App"):
+    if st.sidebar.button("🔁 Reset"):
         reset_app()
 
     page = sidebar_navigation()
@@ -87,20 +92,20 @@ def main():
         solo_quiz_page()
 
     elif page == "dashboard":
-        render_dashboard(st.session_state.get("engine", None))
+        render_dashboard(st.session_state.get("engine"))
 
     elif page == "revision":
-        render_revision_page(st.session_state.get("engine", None))
+        render_revision_page(st.session_state.get("engine"))
 
     elif page == "live":
         init_live_session()
-        live_session_page(st.session_state.get("engine", None), {})
+        live_session_page(st.session_state.get("engine"), {})
 
     elif page == "admin_ai":
         ai_quiz_builder()
 
     else:
-        st.error("⚠ Something went wrong — invalid page.")
+        st.error("⚠ Unknown route")
 
 
 if __name__ == "__main__":
