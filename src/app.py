@@ -1,18 +1,12 @@
 import streamlit as st
 
-# ---------------- IMPORT FIXED (NO DOT PREFIXES) ----------------
-from frontend.ui import (
-    apply_theme,
-    render_mode_picker,
-    render_subject_picker,
-    render_question_UI,
-)
+# ---- FIXED IMPORTS (SINGLE LINE, NO INDENT ISSUES) ----
+from frontend.ui import apply_theme, render_mode_picker, render_subject_picker, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
 from live.live_sync import init_live_session, live_session_page
 from revision.revision_ui import render_revision_page
-
 
 # ---------------- RESET FUNCTION ----------------
 def reset_app():
