@@ -201,63 +201,124 @@ def revision_lab(engine: "QuizEngine | None"):
 
 # ---------- LIVE SESSION (HOST + CLOUD LEADERBOARD) ----------
 
-
 def live_session_page(engine: "QuizEngine | None", xp_info: dict):
-    st.subheader("🌐 Live Session (Prototype Host View)")
+    # --- Local CSS to fix overlap & add neon style ---
+    st.markdown(
+        """
+        <style>
+        /* Label styling */
+        div[data-testid="stTextInput"] > label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #A5B4FC !important;
+            margin-bottom: 4px !important;
+        }
+
+        /* Text input box */
+        div[data-testid="stTextInput"] input {
+            border: 2px solid #7C3AED !important;
+            background-color: rgba(15, 23, 42, 0.85) !important;
+            padding: 10px 12px !important;
+            border-radius: 10px !important;
+            color: #F9FAFB !important;
+        }
+
+        /* Small helper text */
+        div.live-helper {
+            font-size: 12px;
+            color: #9CA3AF;
+            margin-top: 4px;
+        }
+
+        /* Card for each player row */
+        div.player-row {
+            background: linear-gradient(90deg, rgba(37,99,235,0.22), rgba(219,39,119,0.16));
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(129,140,248,0.5);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("🌐 Live Session — Host View")
 
     live = st.session_state.live_session
 
     col1, col2 = st.columns([2, 1])
     with col1:
         code = st.text_input(
-            "Session Code",
+            "Session code",
             value=live.get("code") or "SIGN123",
-            help="Share this with learners so their scores group under one session.",
+            help="Share this code with participants so their scores group together.",
         )
         live["code"] = (code or "SIGN123").strip()
 
+    with col2:
         status_options = ["waiting", "in_progress", "finished"]
         status = st.selectbox(
-            "Session Status",
+            "Session status",
             options=status_options,
             index=status_options.index(live.get("status", "waiting")),
-            help="Prototype toggle to show how sessions move through stages.",
+            help="Prototype toggle to show how the session progresses.",
         )
         live["status"] = status
 
-    with col2:
-        st.write("**Host Controls (Prototype)**")
-        st.write("• Give participants the session code.")
-        st.write("• They play the quiz on their device.")
-        st.write("• As scores are saved, leaderboard updates here.")
-        st.caption(
-            "In the full system, this will be powered by WebSockets and a cloud database."
-        )
+    st.markdown(
+        "<div class='live-helper'>Tip: keep this page open on the projector while "
+        "students play on their own devices.</div>",
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
-    st.write("### 👥 Live Leaderboard")
+    st.markdown("### 👥 Live Leaderboard")
 
     session_code = live.get("code") or "SIGN123"
     leaderboard = get_leaderboard(session_code)
 
+    # Manual refresh button (safe & simple)
+    if st.button("🔄 Refresh leaderboard", help="Click to pull latest scores"):
+        st.experimental_rerun()
+
     if not leaderboard:
         st.info(
-            "No scores yet. Once participants complete quizzes using this session "
+            "No scores yet. Once participants complete a quiz using this session "
             "code, their scores will appear here."
         )
-    else:
-        for i, rec in enumerate(leaderboard, start=1):
-            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
-            st.write(
-                f"{medal} **{rec.get('name','?')}** — {rec.get('score',0)} pts "
-                f"· {rec.get('mode','?')}/{rec.get('subject','?')}"
-            )
+        return
+
+    # Show ranked rows
+    for i, rec in enumerate(leaderboard, start=1):
+        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
+        name = rec.get("name", "Anonymous")
+        score = rec.get("score", 0)
+        mode = rec.get("mode", "?")
+        subject = rec.get("subject", "?")
+
+        with st.container():
+            c1, c2, c3 = st.columns([4, 2, 2])
+            with c1:
+                st.markdown(
+                    f"<div class='player-row'>{medal} <b>{name}</b></div>",
+                    unsafe_allow_html=True,
+                )
+            with c2:
+                st.markdown(
+                    f"<div class='player-row'>Score: <b>{score}</b></div>",
+                    unsafe_allow_html=True,
+                )
+            with c3:
+                st.markdown(
+                    f"<div class='player-row'><span style='font-size:12px;'>{mode}/{subject}</span></div>",
+                    unsafe_allow_html=True,
+                )
 
     st.caption(
         "If Firebase is configured, this leaderboard syncs through Firestore. "
-        "Otherwise, it runs in-memory for the demo."
+        "Otherwise it runs in-memory for the demo."
     )
-
 
 # ---------- ADMIN + AI QUIZ BUILDER (NO OVERLAP) ----------
 
