@@ -294,17 +294,113 @@ def render_question(q: dict, mode: str, index: int, total: int):
 # ---------- RESULTS ----------
 
 def render_results(engine, xp_info: dict):
-    apply_theme()
-    st.success("🎉 Quiz Completed!")
+    def apply_theme():
+    """Neon gaming theme with per-mode tweaks (Streamlit-safe)."""
+    mode = st.session_state.get("mode", "standard")
 
-    st.write(f"### Final Score: **{engine.score}**")
-    st.write(f"Best Streak: **{engine.best_streak}**")
-    st.write(f"Total Questions: **{len(engine.questions)}**")
-    st.write(f"XP Earned: **{xp_info['xp']}** (Level {xp_info['level']})")
+    # Base cyber background + button glow
+    st.markdown(
+        """
+        <style>
+        body {
+            background: radial-gradient(circle at top, #1e293b 0, #020617 60%, #000000 100%);
+        }
 
-    if xp_info["badges"]:
-        st.write("🏅 **Badges Unlocked:**")
-        for b in xp_info["badges"]:
-            st.markdown(f"- {b}")
+        h1, h2, h3 {
+            color: #E5E7EB !important;
+        }
 
-    st.balloons()
+        label, p, span {
+            color: #E5E7EB;
+        }
+
+        /* Question card */
+        .question-box {
+            padding: 18px 20px;
+            background: rgba(15,23,42,0.96);
+            border-radius: 18px;
+            border: 1px solid rgba(96,165,250,0.9);
+            box-shadow: 0 0 30px rgba(59,130,246,0.35);
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        /* Neon button */
+        .stButton>button {
+            border-radius: 999px;
+            border: none;
+            padding: 0.45rem 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            background: linear-gradient(90deg,#6366F1,#EC4899);
+            box-shadow: 0 0 0 rgba(129,140,248,0.0);
+            transition: all 0.16s ease-out;
+        }
+        .stButton>button:hover {
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 0 22px rgba(129,140,248,0.85);
+        }
+
+        /* Radio/checkbox text */
+        div[role="radiogroup"] > label, div[role="checkbox"] > label {
+            color: #E5E7EB !important;
+        }
+
+        /* Progress bar */
+        .stProgress > div > div > div {
+            border-radius: 999px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Per-mode adjustments
+    if mode == "standard":
+        # slightly calmer everything
+        pass
+
+    elif mode == "dyslexia":
+        st.markdown(
+            """
+            <style>
+            * {
+                font-family: Arial, Verdana, sans-serif !important;
+                letter-spacing: 0.08em;
+                line-height: 1.6em;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    elif mode == "adhd":
+        st.markdown(
+            """
+            <style>
+            /* Highlight selection area to anchor attention */
+            div[role="radiogroup"] {
+                background: rgba(30,64,175,0.35);
+                border-radius: 16px;
+                padding: 10px;
+                border: 1px solid rgba(147,197,253,0.7);
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    elif mode == "isl":
+        st.markdown(
+            """
+            <style>
+            body {
+                background: radial-gradient(circle at top, #020617 0, #020617 40%, #000000 100%);
+            }
+            * {
+                font-size: 1.04em;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
