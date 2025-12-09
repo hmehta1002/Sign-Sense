@@ -1,485 +1,105 @@
-import random
-
 import streamlit as st
-
-st.set_page_config(page_title="SignSense", layout="wide")
-
-from backend.logic import QuizEngine
-from backend.cloud_store import add_score, get_leaderboard
-from frontend.ui import (
-    render_header,
-    render_mode_picker,
-    render_subject_picker,
-    render_question,
-    render_results,
-    render_hud,
-)
+from frontend.ui import apply_theme, render_mode_picker, render_subject_picker, render_question_UI
 from frontend.dashboard import render_dashboard
-
-
-# ---------- SESSION STATE ----------
-
-
-def init_state():
-    defaults = {
-        "user_name": "",
-        "mode": None,  # 'standard', 'dyslexia', 'adhd', 'isl'
-        "subject": None,  # 'math' or 'english'
-        "engine": None,  # QuizEngine instance
-        "answered": False,  # whether current question has been answered
-        "feedback": None,  # last question feedback dict
-        "live_session": {
-            "code": "",
-            "status": "waiting",  # 'waiting', 'in_progress', 'finished'
-        },
-    }
-    for k, v in defaults.items():
-        if k not in st.session_state:
-            # copy mutable defaults like dict
-            if isinstance(v, dict):
-                st.session_state[k] = v.copy()
-            else:
-                st.session_state[k] = v
+from backend.logic import QuizEngine
+from ai.ai_builder import ai_quiz_builder
+from live.live_sync import init_live_session, live_session_page
+from revision.revision_ui import render_revision_page
 
 
 def reset_app():
-    """Clear everything and re-init."""
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
-    init_state()
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    st.rerun()
 
 
-# ---------- XP & BADGES ----------
+def sidebar_navigation():
+    options = {
+        "Solo Quiz": "solo",
+        "Live Session": "live",
+        "Revision Lab": "revision",
+        "Dashboard": "dashboard",
+        "Admin / AI Quiz": "admin_ai"
+    }
+    choice = st.sidebar.radio("Go to:", list(options.keys()))
+    return options[choice]
 
 
-def compute_xp_and_badges(engine: "QuizEngine | None"):
-    """Derive XP, level and badges from quiz performance."""
-    if engine is None or not engine.history:
-        return {"xp": 0, "level": 1, "badges": []}
-
-    xp = engine.score
-    level = max(1, xp // 200 + 1)
-
-    history = engine.history
-    total = len(history)
-    correct_count = sum(1 for h in history if h["correct"])
-
-    badges = []
-
-    # High streak badge
-    if engine.best_streak >= 3:
-        badges.append("🔥 Focus Streaker (3+ correct in a row)")
-
-    # Speed badge
-    if any(
-        (h.get("time_taken") is not None and h["time_taken"] <= 5)
-        for h in history
-    ):
-        badges.append("⚡ Speedster (answered in ≤ 5s)")
-
-    # Accuracy badge
-    if total >= 5 and correct_count / total >= 0.8:
-        badges.append("🎯 Accuracy Ace (80%+ correct)")
-
-    # Completion badge
-    if total == len(engine.questions):
-        badges.append("🏁 Quiz Finisher")
-
-    return {"xp": xp, "level": level, "badges": badges}
+def ensure_engine():
+    """Create quiz engine if missing & selection ready."""
+    if "engine" not in st.session_state:
+        mode = st.session_state.get("mode")
+        subject = st.session_state.get("subject")
+        if mode and subject:
+            st.session_state.engine = QuizEngine(mode, subject)
 
 
-# ---------- QUIZ FLOW (SOLO) ----------
-
-
-def quiz_flow():
+def solo_quiz_page():
     engine: QuizEngine = st.session_state.engine
-    question = engine.get_current_question()
+    q = engine.get_current_question()
 
-    # End of quiz
-    if question is None:
-        xp_info = compute_xp_and_badges(engine)
-
-        # Determine session code for saving score (SOLO or live session code)
-        live = st.session_state.get("live_session", {})
-        session_code = live.get("code") or "SOLO"
-        user_name = st.session_state.get("user_name") or "Anonymous"
-
-        add_score(
-            session_code=session_code,
-            name=user_name,
-            score=engine.score,
-            mode=st.session_state.mode,
-            subject=st.session_state.subject,
-        )
-
-        render_results(engine, xp_info)
-        if st.button("🔁 Restart Quiz"):
-            reset_app()
+    if q is None:
+        st.success("🎉 Quiz Finished!")
+        st.balloons()
+        if st.button("View Dashboard"):
+            st.session_state.page = "dashboard"
+            st.rerun()
         return
 
-    total = len(engine.questions)
-    index = engine.current_index + 1
+    render_question_UI(q)
 
-    answer = render_question(
-        question,
-        st.session_state.mode,
-        index,
-        total,
-    )
-
-    # First phase: user hasn't submitted yet
-    if not st.session_state.answered:
-        if st.button("Submit Answer"):
-            fb = engine.check_answer(answer)
-            st.session_state.feedback = fb
-            st.session_state.answered = True
-
-    # Second phase: show feedback + Next button
-    else:
-        fb = st.session_state.feedback
-        if fb is None:
-            st.warning("Something went wrong; please try next question.")
-        else:
-            if fb["correct"]:
-                st.success(f"✔ Correct! +{fb['points']} points")
-            else:
-                st.error(f"❌ Incorrect — correct answer: **{fb['correct_answer']}**")
-
-            if fb["time"] is not None:
-                st.info(f"⏱ Time taken: {fb['time']} seconds")
-
-        if st.button("Next ➡"):
-            engine.next_question()
-            st.session_state.answered = False
-            st.session_state.feedback = None
-
-
-# ---------- REVISION LAB ----------
-
-
-def revision_lab(engine: "QuizEngine | None"):
-    st.subheader("📚 Revision Lab — Fix Your Mistakes")
-
-    if engine is None or not engine.history:
-        st.info("Complete at least one quiz to unlock the Revision Lab.")
-        return
-
-    wrong = [h for h in engine.history if not h["correct"]]
-
-    if not wrong:
-        st.success("🌟 You had no wrong answers! Nothing to revise.")
-        return
-
-    st.write(f"You have **{len(wrong)}** questions to revisit.")
-
-    options = [
-        f"{i+1}. {item['question'][:60]}..." for i, item in enumerate(wrong)
-    ]
-    chosen_label = st.selectbox("Pick a question to review:", options=options)
-    idx = options.index(chosen_label)
-    item = wrong[idx]
-
-    st.markdown(
-        f"""
-        **Original Question**  
-        {item['question']}
-
-        **Your Answer:** {item.get('selected', '—')}  
-        **Correct Answer:** ✅ {item['correct_answer']}
-        """,
-    )
-
-    if "difficulty" in item:
-        st.caption(f"Difficulty: {item['difficulty']}")
-
-    st.info(
-        "🧠 Use this space to explain why the correct answer is right in your own words. "
-        "This mimics an AI explanation step in future versions."
-    )
-    st.text_area("Your explanation (reflection)", key="revision_explanation", height=120)
-
-
-# ---------- LIVE SESSION (HOST + CLOUD LEADERBOARD) ----------
-
-def live_session_page(engine: "QuizEngine | None", xp_info: dict):
-    # --- Local CSS to fix overlap & add neon style ---
-    st.markdown(
-        """
-        <style>
-        /* Label styling */
-        div[data-testid="stTextInput"] > label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #A5B4FC !important;
-            margin-bottom: 4px !important;
-        }
-
-        /* Text input box */
-        div[data-testid="stTextInput"] input {
-            border: 2px solid #7C3AED !important;
-            background-color: rgba(15, 23, 42, 0.85) !important;
-            padding: 10px 12px !important;
-            border-radius: 10px !important;
-            color: #F9FAFB !important;
-        }
-
-        /* Small helper text */
-        div.live-helper {
-            font-size: 12px;
-            color: #9CA3AF;
-            margin-top: 4px;
-        }
-
-        /* Card for each player row */
-        div.player-row {
-            background: linear-gradient(90deg, rgba(37,99,235,0.22), rgba(219,39,119,0.16));
-            border-radius: 12px;
-            padding: 8px 12px;
-            margin-bottom: 6px;
-            border: 1px solid rgba(129,140,248,0.5);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.subheader("🌐 Live Session — Host View")
-
-    live = st.session_state.live_session
-
-    col1, col2 = st.columns([2, 1])
+    prev = engine.current_index > 0
+    col1, col2 = st.columns(2)
     with col1:
-        code = st.text_input(
-            "Session code",
-            value=live.get("code") or "SIGN123",
-            help="Share this code with participants so their scores group together.",
-        )
-        live["code"] = (code or "SIGN123").strip()
-
+        if prev and st.button("⬅️ Back"):
+            engine.current_index -= 1
+            st.rerun()
     with col2:
-        status_options = ["waiting", "in_progress", "finished"]
-        status = st.selectbox(
-            "Session status",
-            options=status_options,
-            index=status_options.index(live.get("status", "waiting")),
-            help="Prototype toggle to show how the session progresses.",
-        )
-        live["status"] = status
-
-    st.markdown(
-        "<div class='live-helper'>Tip: keep this page open on the projector while "
-        "students play on their own devices.</div>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("---")
-    st.markdown("### 👥 Live Leaderboard")
-
-    session_code = live.get("code") or "SIGN123"
-    leaderboard = get_leaderboard(session_code)
-
-    # Manual refresh button (safe & simple)
-    if st.button("🔄 Refresh leaderboard", help="Click to pull latest scores"):
-        st.experimental_rerun()
-
-    if not leaderboard:
-        st.info(
-            "No scores yet. Once participants complete a quiz using this session "
-            "code, their scores will appear here."
-        )
-        return
-
-    # Show ranked rows
-    for i, rec in enumerate(leaderboard, start=1):
-        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "🔹"
-        name = rec.get("name", "Anonymous")
-        score = rec.get("score", 0)
-        mode = rec.get("mode", "?")
-        subject = rec.get("subject", "?")
-
-        with st.container():
-            c1, c2, c3 = st.columns([4, 2, 2])
-            with c1:
-                st.markdown(
-                    f"<div class='player-row'>{medal} <b>{name}</b></div>",
-                    unsafe_allow_html=True,
-                )
-            with c2:
-                st.markdown(
-                    f"<div class='player-row'>Score: <b>{score}</b></div>",
-                    unsafe_allow_html=True,
-                )
-            with c3:
-                st.markdown(
-                    f"<div class='player-row'><span style='font-size:12px;'>{mode}/{subject}</span></div>",
-                    unsafe_allow_html=True,
-                )
-
-    st.caption(
-        "If Firebase is configured, this leaderboard syncs through Firestore. "
-        "Otherwise it runs in-memory for the demo."
-    )
-
-# ---------- ADMIN + AI QUIZ BUILDER (NO OVERLAP) ----------
+        if st.button("Next ➜"):
+            engine.next_question()
+            st.rerun()
 
 
-def admin_ai_page(engine: "QuizEngine | None"):
-    st.subheader("🧠 Admin & AI Quiz Builder (Prototype)")
-    st.write(
-        "This panel simulates AI-driven quiz creation. In the full build, an AI "
-        "model will read PDFs / notes and auto-generate questions."
-    )
-
-    # Subtle styling for the uploader
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stFileUploader"] {
-            border: 2px dashed #6b46c1;
-            padding: 16px;
-            border-radius: 12px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    col_left, col_right = st.columns([2, 1], gap="large")
-
-    with col_left:
-        subject = st.selectbox("Target subject", ["math", "english"])
-        topic = st.text_input("Topic / concept (e.g., fractions, tenses)")
-
-        num_q = st.slider("Number of questions", 3, 15, 5)
-        st.markdown(
-            f"<p style='font-size:13px;color:#aaaaaa;'>Selected: {num_q} questions</p>",
-            unsafe_allow_html=True,
-        )
-
-        generate = st.button(
-            "⚡ Generate quiz with AI (simulated)", use_container_width=True
-        )
-
-        if generate:
-            # We can create a temporary engine to access the full question pool
-            temp_engine = QuizEngine(st.session_state.mode or "standard", subject)
-            pool = temp_engine.questions
-
-            if topic:
-                filtered = [
-                    q
-                    for q in pool
-                    if topic.lower() in q["question"].lower()
-                    or any(
-                        topic.lower() in h.lower() for h in q.get("hints", [])
-                    )
-                ]
-            else:
-                filtered = pool
-
-            if not filtered:
-                filtered = pool
-
-            k = min(num_q, len(filtered))
-            new_quiz = random.sample(filtered, k=k)
-
-            # Overwrite current engine with new AI-generated quiz
-            st.session_state.engine = QuizEngine(
-                st.session_state.mode, subject
-            )
-            st.session_state.engine.questions = new_quiz
-            st.session_state.engine.current_index = 0
-            st.session_state.engine.history = []
-            st.session_state.engine.score = 0
-            st.session_state.engine.streak = 0
-            st.session_state.engine.best_streak = 0
-
-            st.success(
-                f"✅ Simulated AI generated {k} questions for subject '{subject}' "
-                f"on topic '{topic or 'general'}'."
-            )
-            st.info("Go to the Solo Quiz page to play this AI-generated quiz.")
-
-    with col_right:
-        st.markdown("##### 📄 Upload PDF / Text (optional)")
-        uploaded = st.file_uploader(
-            "Upload a document", type=["pdf", "txt"]
-        )
-
-        if uploaded is not None:
-            st.info(f"📁 File uploaded: `{uploaded.name}`")
-            st.caption(
-                "In the full version, an AI model will extract key concepts from this file."
-            )
-
-
-# ---------- SIDEBAR NAVIGATION ----------
-
-
-def sidebar_nav():
-    st.sidebar.title("⚡ SignSense")
-
-    st.sidebar.text_input(
-        "Your name (for leaderboard)",
-        key="user_name",
-        placeholder="Enter name",
-    )
+def main():
+    st.set_page_config(page_title="SignSense", layout="wide")
+    apply_theme()
 
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
 
-    page = st.sidebar.radio(
-        "Go to:",
-        ["Solo Quiz", "Live Session", "Revision Lab", "Dashboard", "Admin / AI Quiz"],
-        index=0,
-        key="nav_page",
-    )
-    return page
+    # Navigation
+    st.session_state.page = sidebar_navigation()
 
+    # Flow control
+    if st.session_state.page == "solo":
+        if "mode" not in st.session_state:
+            render_mode_picker()
+            return
+        if "subject" not in st.session_state:
+            render_subject_picker()
+            return
 
-# ---------- MAIN ----------
+        ensure_engine()
+        solo_quiz_page()
 
+    elif st.session_state.page == "dashboard":
+        engine = st.session_state.get("engine")
+        render_dashboard(engine)
 
-def main():
-    init_state()
+    elif st.session_state.page == "revision":
+        engine = st.session_state.get("engine")
+        render_revision_page(engine)
 
-    page = sidebar_nav()
+    elif st.session_state.page == "live":
+        init_live_session()
+        engine = st.session_state.get("engine")
+        live_session_page(engine, {})
 
-    # Step 1: pick mode
-    if st.session_state.mode is None:
-        render_mode_picker()
-        return
+    elif st.session_state.page == "admin_ai":
+        ai_quiz_builder()
 
-    # Step 2: pick subject
-    if st.session_state.subject is None:
-        render_subject_picker()
-        return
-
-    # Step 3: create engine (once)
-    if st.session_state.engine is None:
-        st.session_state.engine = QuizEngine(
-            st.session_state.mode,
-            st.session_state.subject,
-        )
-
-    engine: QuizEngine = st.session_state.engine
-    xp_info = compute_xp_and_badges(engine)
-
-    # Global header + HUD
-    render_header(st.session_state.mode)
-    render_hud(engine, xp_info)
-
-    # Router
-    if page == "Solo Quiz":
-        quiz_flow()
-    elif page == "Live Session":
-        live_session_page(engine, xp_info)
-    elif page == "Revision Lab":
-        revision_lab(engine)
-    elif page == "Dashboard":
-        render_dashboard(engine, xp_info)
     else:
-        admin_ai_page(engine)
+        st.error("Unknown page route!")
 
 
 if __name__ == "__main__":
