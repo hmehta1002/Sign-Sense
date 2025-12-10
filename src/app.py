@@ -1,12 +1,6 @@
 import streamlit as st
 
-# ---------------- FIXED IMPORTS ----------------
-from frontend.ui import (
-    apply_theme,
-    render_mode_picker,
-    render_subject_picker,
-    render_question_UI,
-)
+from frontend.ui import apply_theme, render_mode_picker, render_subject_picker, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
