@@ -6,8 +6,6 @@ from pathlib import Path
 
 class QuizEngine:
     def __init__(self, mode: str, subject: str):
-        # mode: 'standard', 'dyslexia', 'adhd', 'isl'
-        # subject: 'math' or 'english'
         self.mode = mode
         self.subject = subject
 
@@ -21,6 +19,9 @@ class QuizEngine:
         self.questions = self.load_questions()
         random.shuffle(self.questions)
 
+    # -----------------------------
+    # LOAD JSON QUESTIONS
+    # -----------------------------
     def load_questions(self):
         file_map = {
             "math": "questions_math.json",
@@ -41,25 +42,43 @@ class QuizEngine:
 
         if not isinstance(data, list):
             raise ValueError("Questions file must contain a JSON list.")
+
         return data
 
+    # -----------------------------
+    # SAFELY FETCH CURRENT QUESTION
+    # -----------------------------
     def get_current_question(self):
         if self.current_index >= len(self.questions):
             return None
-        self.start_time = time.time()
-        return self.questions[self.current_index]
 
+        q = self.questions[self.current_index]
+
+        # SAFETY FIX: skip broken questions
+        if (
+            "question" not in q
+            or "options" not in q
+            or not isinstance(q["options"], list)
+            or len(q["options"]) == 0
+        ):
+            self.current_index += 1
+            return self.get_current_question()
+
+        self.start_time = time.time()
+        return q
+
+    # -----------------------------
+    # CHECK ANSWER
+    # -----------------------------
     def check_answer(self, user_answer: str):
         q = self.questions[self.current_index]
         correct = (user_answer == q["answer"])
 
-        # Time taken
         if self.start_time is not None:
             time_taken = round(time.time() - self.start_time, 2)
         else:
             time_taken = None
 
-        # Scoring
         base_points = 100
         speed_bonus = 0
         if time_taken is not None:
@@ -100,5 +119,8 @@ class QuizEngine:
             "time": time_taken,
         }
 
+    # -----------------------------
+    # NEXT QUESTION
+    # -----------------------------
     def next_question(self):
         self.current_index += 1
