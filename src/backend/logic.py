@@ -19,9 +19,6 @@ class QuizEngine:
         self.questions = self.load_questions()
         random.shuffle(self.questions)
 
-    # -----------------------------
-    # LOAD JSON QUESTIONS
-    # -----------------------------
     def load_questions(self):
         file_map = {
             "math": "questions_math.json",
@@ -45,31 +42,12 @@ class QuizEngine:
 
         return data
 
-    # -----------------------------
-    # SAFELY FETCH CURRENT QUESTION
-    # -----------------------------
     def get_current_question(self):
         if self.current_index >= len(self.questions):
             return None
-
-        q = self.questions[self.current_index]
-
-        # SAFETY FIX: skip broken questions
-        if (
-            "question" not in q
-            or "options" not in q
-            or not isinstance(q["options"], list)
-            or len(q["options"]) == 0
-        ):
-            self.current_index += 1
-            return self.get_current_question()
-
         self.start_time = time.time()
-        return q
+        return self.questions[self.current_index]
 
-    # -----------------------------
-    # CHECK ANSWER
-    # -----------------------------
     def check_answer(self, user_answer: str):
         q = self.questions[self.current_index]
         correct = (user_answer == q["answer"])
@@ -119,8 +97,5 @@ class QuizEngine:
             "time": time_taken,
         }
 
-    # -----------------------------
-    # NEXT QUESTION
-    # -----------------------------
     def next_question(self):
         self.current_index += 1
