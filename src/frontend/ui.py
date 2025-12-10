@@ -1,406 +1,361 @@
 import streamlit as st
+import html
+import urllib.parse
 
-# Optional TTS – safe if not installed
-try:
-    from gtts import gTTS  # type: ignore
-    TTS_AVAILABLE = True
-except Exception:
-    TTS_AVAILABLE = False
+# ------------------------
+# FRONTEND / UI (neon + accessibility)
+# ------------------------
 
-
-# ---------- AVATARS (realistic AI-style placeholders) ----------
-
-AVATAR_URLS = {
-    "standard": "https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg",
-    "dyslexia": "https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg",
-    "adhd": "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg",
-    "isl": "https://images.pexels.com/photos/1557213/pexels-photo-1557213.jpeg",
-}
+# ---------- small helpers ----------
+def safe_text(s: str) -> str:
+    """Escape text for injection into HTML snippets."""
+    return html.escape(s or "")
 
 
-# ---------- THEME + MODE VISUALS ----------
-
-def apply_theme():
-    """Base neon cyberpunk theme + per-mode CSS."""
-    mode = st.session_state.get("mode", "standard")
-
-    st.markdown(
-        """
-        <style>
-        body {
-            background: radial-gradient(circle at top, #13162b 0, #050316 55%, #000000 100%);
-        }
-        h1, h2, h3, label {
-            color: #9BE8FF !important;
-        }
-        .question-box {
-            padding: 16px;
-            background: rgba(10, 15, 40, 0.9);
-            border-radius: 14px;
-            border: 1px solid #4dd2ff;
-            margin-bottom: 16px;
-            font-size: 18px;
-            color: #ffffff;
-        }
-        .stButton>button {
-            border-radius: 999px;
-            border: none;
-            padding: 0.45rem 1.4rem;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s ease-out;
-        }
-        .stButton>button:hover {
-            transform: translateY(-1px) scale(1.03);
-            box-shadow: 0 0 18px rgba(123,47,247,0.75);
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if mode == "standard":
-        st.markdown(
-            """
-            <style>
-            .stButton>button {
-                background: linear-gradient(90deg,#7b2ff7,#00c3ff);
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-    elif mode == "dyslexia":
-        st.markdown(
-            """
-            <style>
-            * {
-                font-family: Arial, Verdana, sans-serif !important;
-                letter-spacing: 1.4px;
-                line-height: 1.6em;
-            }
-            .stButton>button {
-                background: #3a7bd5;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-    elif mode == "adhd":
-        st.markdown(
-            """
-            <style>
-            .stRadio > div {
-                background: rgba(255,255,255,0.05);
-                border-radius: 10px;
-                padding: 6px;
-                border: 1px solid rgba(255,221,87,0.65);
-            }
-            .stButton>button {
-                background: linear-gradient(90deg,#ff9800,#ff2d55);
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-    elif mode == "isl":
-        st.markdown(
-            """
-            <style>
-            body {
-                background: #020818;
-            }
-            * {
-                font-size: 1.04em;
-            }
-            .stButton>button {
-                background: #005f99;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
+def tts_audio_snippet(text: str, voice: str = "Brian"):
+    """Return an HTML <audio> snippet that plays TTS from StreamElements (simple, no libs)."""
+    # encode text for URL
+    q = urllib.parse.quote(str(text))
+    # using streamelements' simple speech endpoint (public demo). Works in many browsers.
+    url = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={q}"
+    return f'<audio autoplay><source src="{url}" type="audio/mpeg"></audio>'
 
 
-# ---------- HEADER + AVATAR ----------
-
-def render_header(mode: str):
-    apply_theme()
-
-    labels = {
-        "standard": "Standard Mode",
-        "dyslexia": "Dyslexia-Friendly Mode",
-        "adhd": "ADHD Hybrid Mode",
-        "isl": "Deaf / ISL Mode",
-    }
-    pretty = labels.get(mode, mode)
-
-    col1, col2 = st.columns([1, 3])
-
-    with col1:
-        avatar = AVATAR_URLS.get(mode)
-        if avatar:
-            st.image(avatar, caption=pretty, use_column_width=True)
-
-    with col2:
-        st.markdown(
-            """
-            <h1 style='color:#9BE8FF; letter-spacing:0.14em; margin-bottom:0.2em;'>
-                SIGNSENSE
-            </h1>
-            <p style='color:#ffffffaa;'>
-                Neuro-inclusive AI quiz for ADHD, Dyslexia & Deaf learners.
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
+# ------------------------------
+# DYSLEXIA TEXT TRANSFORMS
+# ------------------------------
+def dyslexia_transform(text: str, view: str) -> str:
+    """
+    Simple dyslexia-friendly transforms.
+    view: "normal" | "upper" | "lower" | "spaced"
+    """
+    if not text:
+        return text
+    if view == "normal":
+        return text
+    if view == "lower":
+        return text.lower()
+    if view == "upper":
+        return text.upper()
+    if view == "spaced":
+        # add extra spacing between words to aid parsing
+        return "  ".join(text.split())
+    return text
 
 
-# ---------- HUD (Score, Level, XP) ----------
-
-def render_hud(engine, xp_info: dict):
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Score", engine.score)
-    col2.metric("Best Streak", engine.best_streak)
-    col3.metric("Level", xp_info["level"])
-
-    xp = xp_info["xp"]
-    level = xp_info["level"]
-    next_level_xp = level * 200
-    base_level_xp = (level - 1) * 200
-    span = max(1, next_level_xp - base_level_xp)
-    progress = min(1.0, max(0.0, (xp - base_level_xp) / span))
-
-    st.progress(progress, text=f"XP {xp} / {next_level_xp}")
-
-    if xp_info["badges"]:
-        st.caption("Unlocked badges: " + " · ".join(xp_info["badges"]))
-
-
-# ---------- MODE & SUBJECT PICKERS ----------
-
-def render_mode_picker():
-    apply_theme()
-    st.write("### 🧠 Choose Learning Mode")
-
-    choice = st.radio(
-        "",
-        ["Standard 🎯", "Dyslexia-Friendly 🔤", "ADHD Hybrid ⚡", "Deaf / ISL ✋"],
-    )
-
-    if st.button("Continue ➜", key="mode_continue"):
-        mapping = {
-            "Standard 🎯": "standard",
-            "Dyslexia-Friendly 🔤": "dyslexia",
-            "ADHD Hybrid ⚡": "adhd",
-            "Deaf / ISL ✋": "isl",
-        }
-        st.session_state.mode = mapping[choice]
-
-
-def render_subject_picker():
-    apply_theme()
-    st.write("### 📚 Choose Subject")
-
-    choice = st.radio(
-        "",
-        ["Mathematics 🧮", "English ✍️"],
-    )
-
-    if st.button("Start Quiz 🚀", key="subject_start"):
-        mapping = {
-            "Mathematics 🧮": "math",
-            "English ✍️": "english",
-        }
-        st.session_state.subject = mapping[choice]
-
-
-# ---------- TTS HELPER ----------
-
-def _play_tts(text: str, q_id: str):
-    if not TTS_AVAILABLE:
-        st.warning("Text-to-speech is not available here.")
-        return
-    try:
-        tts = gTTS(text)
-        path = f"/tmp/tts_{q_id}.mp3"
-        tts.save(path)
-        st.audio(path)
-    except Exception:
-        st.warning("Unable to generate audio right now.")
-
-
-# ---------- QUESTION RENDER ----------
-
-def render_question(q: dict, mode: str, index: int, total: int):
-    apply_theme()
-
+# ------------------------------
+# ADHD VISUAL HIGHLIGHT
+# ------------------------------
+def adhd_highlight_block(text: str):
     st.markdown(
         f"""
-        <div class="question-box">
-            <b>Question {index}/{total}</b><br><br>
-            {q['question']}
+        <div style="
+            padding: 14px;
+            margin-top: 8px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, rgba(0,180,255,0.08), rgba(123,97,255,0.04));
+            border: 1px solid rgba(0,200,255,0.12);
+            font-size: 18px;
+            font-weight: 600;
+            color: #E6F7FF;
+        ">
+            {safe_text(text)}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # ISL media
-    if mode == "isl":
-        col_v, col_t = st.columns([1.3, 2])
-        with col_v:
-            if q.get("isl_video"):
-                st.video(q["isl_video"])
-            elif q.get("isl_gif"):
-                st.image(q["isl_gif"], caption="ISL Support")
-        with col_t:
-            st.write("Watch the sign and pick the correct option.")
 
-    # ADHD badge
-    if mode == "adhd":
-        st.markdown(
-            """
-            <span style='display:inline-block;
-                         padding:4px 12px;
-                         border-radius:999px;
-                         background:#ff980022;
-                         color:#ff9800;
-                         border:1px solid #ff9800aa;
-                         font-size:0.85em;'>
-                ADHD Focus Mode ⚡
-            </span>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    # Answer options
-    key = f"answer_{q.get('id', index)}"
-    answer = st.radio("Choose your answer:", q["options"], key=key)
-
-    # TTS for non-ISL modes
-    if mode in ("standard", "dyslexia", "adhd"):
-        label = q.get("tts_text", q["question"])
-        if st.button("🔊 Read question aloud", key=f"tts_{q.get('id', index)}"):
-            _play_tts(label, str(q.get("id", index)))
-
-    # Hint
-    if q.get("hints") and st.checkbox("💡 Show Hint", key=f"hint_{q.get('id', index)}"):
-        st.info(q["hints"][0])
-
-    return answer
+# ------------------------------
+# DYSLEXIA TEXT BLOCK
+# ------------------------------
+def dyslexia_text_block(text: str):
+    st.markdown(
+        f"""
+        <div style="
+            font-size:20px;
+            line-height:1.6;
+            padding:12px;
+            border-radius:10px;
+            background: rgba(255,255,255,0.03);
+            border-left: 6px solid #00E5FF;
+            font-family: 'Verdana', 'Arial', sans-serif;
+            color: #F8FAFC;
+        ">
+            {safe_text(text)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-# ---------- RESULTS ----------
+# ------------------------------
+# ISL AVATAR (GIF / Video)
+# ------------------------------
+def isl_avatar(url_gif: str = None, url_video: str = None, width: int = 300):
+    """Render ISL avatar area; accepts gif or mp4 link."""
+    if url_gif:
+        try:
+            st.image(url_gif, width=width, caption="ISL Assistant")
+        except Exception:
+            # fallback: show url as link if image fails
+            st.write(f"ISL GIF: {url_gif}")
+    if url_video:
+        try:
+            st.video(url_video)
+        except Exception:
+            st.write(f"ISL Video: {url_video}")
 
-def render_results(engine, xp_info: dict):
-    def apply_theme():
-    """Neon gaming theme with per-mode tweaks (Streamlit-safe)."""
-    mode = st.session_state.get("mode", "standard")
 
-    # Base cyber background + button glow
+# ------------------------------
+# NEON THEME (Streamlit-safe CSS)
+# ------------------------------
+def apply_theme():
+    """Apply neon / accessible theme with mode-aware tweaks."""
     st.markdown(
         """
         <style>
-        body {
-            background: radial-gradient(circle at top, #1e293b 0, #020617 60%, #000000 100%);
+        /* Page background */
+        .css-18e3th9 {  /* streamlit main */
+            background: radial-gradient(circle at 10% 20%, #071029 0%, #02040a 60%, #000000 100%);
+            color: #E6EEF3;
         }
 
-        h1, h2, h3 {
-            color: #E5E7EB !important;
-        }
-
-        label, p, span {
-            color: #E5E7EB;
+        /* Neon headers */
+        .neon-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #A5F3FC;
+            text-shadow: 0 0 18px rgba(165,243,252,0.12);
+            margin-bottom: 10px;
         }
 
         /* Question card */
-        .question-box {
-            padding: 18px 20px;
-            background: rgba(15,23,42,0.96);
-            border-radius: 18px;
-            border: 1px solid rgba(96,165,250,0.9);
-            box-shadow: 0 0 30px rgba(59,130,246,0.35);
-            margin-bottom: 16px;
+        .neon-box {
+            padding: 14px 18px;
+            border-radius: 12px;
+            background: rgba(10,14,24,0.8);
+            border: 1px solid rgba(99,102,241,0.14);
+            box-shadow: 0 6px 22px rgba(99,102,241,0.04);
+            color: #F8FAFC;
             font-size: 18px;
         }
 
-        /* Neon button */
+        /* Neon buttons */
         .stButton>button {
             border-radius: 999px;
+            padding: 8px 18px;
+            font-weight: 700;
+            background: linear-gradient(90deg,#7C3AED,#06B6D4);
+            color: #041425;
             border: none;
-            padding: 0.45rem 1.5rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            background: linear-gradient(90deg,#6366F1,#EC4899);
-            box-shadow: 0 0 0 rgba(129,140,248,0.0);
-            transition: all 0.16s ease-out;
+            box-shadow: 0 4px 14px rgba(124,58,237,0.18);
         }
         .stButton>button:hover {
-            transform: translateY(-1px) scale(1.03);
-            box-shadow: 0 0 22px rgba(129,140,248,0.85);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(6,182,212,0.18);
+            color: white;
         }
 
-        /* Radio/checkbox text */
-        div[role="radiogroup"] > label, div[role="checkbox"] > label {
-            color: #E5E7EB !important;
+        /* Radio/label color */
+        div[role="radiogroup"] > label, div[role="radiogroup"] {
+            color: #E6EEF3 !important;
         }
 
-        /* Progress bar */
-        .stProgress > div > div > div {
-            border-radius: 999px;
+        /* File uploader look */
+        div[data-testid="stFileUploader"] {
+            border-radius: 12px;
+            border: 2px dashed rgba(99,102,241,0.12);
+            padding: 12px;
+            background: rgba(255,255,255,0.01);
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Per-mode adjustments
-    if mode == "standard":
-        # slightly calmer everything
+    # Per-mode CSS tweaks if user selected mode already
+    m = st.session_state.get("mode", "standard")
+    if m == "dyslexia":
+        st.markdown(
+            """
+            <style>
+            body, div, label {
+                font-family: 'Verdana', 'Arial', sans-serif !important;
+                letter-spacing: 0.04em !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+    elif m == "adhd":
+        st.markdown(
+            """
+            <style>
+            div[role="radiogroup"] { background: rgba(6,182,212,0.03); border-radius:8px; padding:8px; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ------------------------------
+# RENDER MODE PICKER (exposed to app.py)
+# ------------------------------
+def render_mode_picker():
+    """
+    Renders the mode picker. Sets `st.session_state.mode` to one of:
+    'standard', 'dyslexia', 'adhd', 'isl', 'hybrid'
+    """
+    st.markdown('<div class="neon-title">🧭 Choose Accessibility Mode</div>', unsafe_allow_html=True)
+
+    # Show short descriptions with radio choices
+    choices = [
+        "Standard",
+        "Dyslexia Mode (readability)",
+        "ADHD Assist (focus)",
+        "ISL (Indian Sign Language)",
+        "Hybrid Accessibility (Best of all)"
+    ]
+
+    choice = st.radio("Mode", choices, index=0, horizontal=True)
+
+    label_to_key = {
+        "Standard": "standard",
+        "Dyslexia Mode (readability)": "dyslexia",
+        "ADHD Assist (focus)": "adhd",
+        "ISL (Indian Sign Language)": "isl",
+        "Hybrid Accessibility (Best of all)": "hybrid",
+    }
+
+    if st.button("Continue ➜"):
+        st.session_state.mode = label_to_key.get(choice, "standard")
+        # small default init values helpful for adhd focus
+        if st.session_state.mode == "adhd":
+            st.session_state.adhd_opt = 0
+        st.experimental_rerun()
+
+
+# ------------------------------
+# RENDER SUBJECT PICKER (exposed to app.py)
+# ------------------------------
+def render_subject_picker():
+    """
+    Renders the subject picker. Sets `st.session_state.subject` to 'math' or 'english'.
+    """
+    st.markdown('<div class="neon-title">📚 Choose Subject</div>', unsafe_allow_html=True)
+
+    subject = st.selectbox("Select subject", ["Math", "English"], index=0)
+    if st.button("Start Quiz 🚀"):
+        st.session_state.subject = subject.lower()
+        st.experimental_rerun()
+
+
+# ------------------------------
+# MAIN QUESTION RENDERER (exposed to app.py)
+# ------------------------------
+def render_question_UI(question: dict):
+    """
+    Renders a question object. Expected fields:
+    - id (str), question (str), options (list[str]), answer (str),
+      difficulty (str, optional), isl_gif (url), isl_video (url), hints (list), tts_text (str)
+    Sets st.session_state.selected_answer when user picks.
+    Returns the selected option (also stored in session).
+    """
+    # ensure selected_answer key exists for this question id
+    qkey = f"selected_{question.get('id', 'q')}"
+    mode = st.session_state.get("mode", "standard")
+
+    # Header
+    st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
+
+    # ISL assistant (if available)
+    if mode in ("isl", "hybrid"):
+        st.markdown("### 🤟 ISL Assistant")
+        isl_avatar(question.get("isl_gif"), question.get("isl_video"))
+
+    # Question text (dyslexia transform if needed)
+    if mode in ("dyslexia", "hybrid"):
+        # show transform control
+        t_choice = st.selectbox("Reading view", ["normal", "lower", "upper", "spaced"], key=f"view_{question.get('id','v')}")
+        transformed = dyslexia_transform(question.get("question", ""), t_choice)
+        dyslexia_text_block(transformed)
+    else:
+        st.markdown(f'<div class="neon-box">{safe_text(question.get("question", ""))}</div>', unsafe_allow_html=True)
+
+    st.markdown("")  # small spacer
+
+    # ADHD mode: show one option at a time for focus
+    if mode == "adhd":
+        opts = question.get("options", [])
+        if "adhd_opt" not in st.session_state:
+            st.session_state.adhd_opt = 0
+        idx = st.session_state.adhd_opt
+        total = len(opts)
+        if idx >= total:
+            st.session_state.adhd_opt = 0
+            idx = 0
+
+        adhd_highlight_block(f"Option {idx+1} of {total}: {opts[idx]}")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("Next Option ➜", key=f"next_opt_{question.get('id','n')}") and idx < total - 1:
+                st.session_state.adhd_opt = idx + 1
+                st.experimental_rerun()
+        with col2:
+            if st.button("Select This Option", key=f"choose_opt_{question.get('id','c')}"):
+                st.session_state[qkey] = opts[idx]
+                # selection made — return immediately
+                return st.session_state.get(qkey)
+
+        return None  # in ADHD flow we stop here until user selects
+
+    # Normal / dyslexia / isl / hybrid modes: show all options as radio
+    options = question.get("options", [])
+    # key per question so multiple questions don't clash in session
+    selected = st.radio("Choose your answer:", options, key=qkey)
+    st.session_state[qkey] = selected
+
+    # Hints for dyslexia/hybrid
+    if mode in ("dyslexia", "hybrid"):
+        with st.expander("💡 Hints"):
+            for h in question.get("hints", []):
+                st.markdown(f"- {safe_text(h)}")
+
+    # Text-to-speech control (plays short TTS)
+    if question.get("tts_text") and mode in ("standard", "dyslexia", "hybrid", "adhd"):
+        if st.button("🔊 Read Aloud", key=f"tts_{question.get('id','t')}"):
+            try:
+                snippet = tts_audio_snippet(question.get("tts_text"))
+                st.markdown(snippet, unsafe_allow_html=True)
+            except Exception:
+                st.warning("TTS playback failed in this environment.")
+
+    # tiny UX tips for ISL mode
+    if mode == "isl":
+        st.caption("Tip: Watch the ISL assistant and then select the answer.")
+
+    return st.session_state.get(qkey)
+
+
+# ------------------------------
+# SMALL UTILITY: CONFETTI / CELEBRATE
+# ------------------------------
+def celebrate():
+    # Streamlit has st.balloons(); keep it safe
+    try:
+        st.balloons()
+    except Exception:
         pass
 
-    elif mode == "dyslexia":
-        st.markdown(
-            """
-            <style>
-            * {
-                font-family: Arial, Verdana, sans-serif !important;
-                letter-spacing: 0.08em;
-                line-height: 1.6em;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
-    elif mode == "adhd":
-        st.markdown(
-            """
-            <style>
-            /* Highlight selection area to anchor attention */
-            div[role="radiogroup"] {
-                background: rgba(30,64,175,0.35);
-                border-radius: 16px;
-                padding: 10px;
-                border: 1px solid rgba(147,197,253,0.7);
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    elif mode == "isl":
-        st.markdown(
-            """
-            <style>
-            body {
-                background: radial-gradient(circle at top, #020617 0, #020617 40%, #000000 100%);
-            }
-            * {
-                font-size: 1.04em;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
+# ------------------------------
+# DEBUG / DEV: quick status panel
+# ------------------------------
+def debug_panel():
+    if st.checkbox("Show debug", key="debug_ui"):
+        st.json({
+            "mode": st.session_state.get("mode"),
+            "subject": st.session_state.get("subject"),
+            "adhd_opt": st.session_state.get("adhd_opt"),
+        })
