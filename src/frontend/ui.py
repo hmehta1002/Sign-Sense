@@ -1,33 +1,50 @@
+"""
+frontend/ui.py
+
+Full, self-contained UI module for SignSense.
+Contains:
+- theme application (neon)
+- accessibility modes: standard, dyslexia, adhd, isl, hybrid
+- dyslexia transforms + dyslexia text block
+- ADHD safe one-option flow
+- ISL avatar (gif / mp4)
+- text-to-speech snippet (StreamElements demo endpoint)
+- question renderer (safe, robust)
+- mode + subject pickers
+- small utilities: celebrate, debug panel
+"""
+
+from typing import List, Optional
 import streamlit as st
 import html
 import urllib.parse
+import traceback
 
-# ------------------------
-# FRONTEND / UI (neon + accessibility)
-# ------------------------
-
-# ---------- small helpers ----------
+# ---------------------------------------------------------------------
+# Basic helpers
+# ---------------------------------------------------------------------
 def safe_text(s: str) -> str:
-    """Escape text for injection into HTML snippets."""
+    """Escape text for HTML injection."""
     return html.escape(s or "")
 
 
-def tts_audio_snippet(text: str, voice: str = "Brian"):
-    """Return an HTML <audio> snippet that plays TTS from StreamElements (simple, no libs)."""
-    # encode text for URL
-    q = urllib.parse.quote(str(text))
-    # using streamelements' simple speech endpoint (public demo). Works in many browsers.
-    url = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={q}"
-    return f'<audio autoplay><source src="{url}" type="audio/mpeg"></audio>'
+def tts_audio_snippet(text: str, voice: str = "Brian") -> str:
+    """Return an HTML audio snippet using a public StreamElements endpoint."""
+    try:
+        q = urllib.parse.quote(str(text))
+        url = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={q}"
+        return f'<audio autoplay><source src="{url}" type="audio/mpeg"></audio>'
+    except Exception:
+        return ""
 
 
-# ------------------------------
-# DYSLEXIA TEXT TRANSFORMS
-# ------------------------------
+# ---------------------------------------------------------------------
+# Dyslexia helpers and styling
+# ---------------------------------------------------------------------
 def dyslexia_transform(text: str, view: str) -> str:
     """
-    Simple dyslexia-friendly transforms.
-    view: "normal" | "upper" | "lower" | "spaced"
+    Apply simple dyslexia-friendly transforms.
+    view can be: normal | lower | upper | spaced
     """
     if not text:
         return text
@@ -38,14 +55,35 @@ def dyslexia_transform(text: str, view: str) -> str:
     if view == "upper":
         return text.upper()
     if view == "spaced":
-        # add extra spacing between words to aid parsing
+        # add extra inter-word spacing
         return "  ".join(text.split())
     return text
 
 
-# ------------------------------
-# ADHD VISUAL HIGHLIGHT
-# ------------------------------
+def dyslexia_text_block(text: str):
+    """Render a dyslexia-friendly paragraph block."""
+    st.markdown(
+        f"""
+        <div style="
+            font-size:20px;
+            line-height:1.6;
+            padding:12px;
+            border-radius:10px;
+            background: rgba(255,255,255,0.03);
+            border-left: 6px solid #00E5FF;
+            font-family: 'Verdana', 'Arial', sans-serif;
+            color: #F8FAFC;
+        ">
+            {safe_text(text)}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------
+# ADHD highlight block (visual emphasis)
+# ---------------------------------------------------------------------
 def adhd_highlight_block(text: str):
     st.markdown(
         f"""
@@ -66,40 +104,22 @@ def adhd_highlight_block(text: str):
     )
 
 
-# ------------------------------
-# DYSLEXIA TEXT BLOCK
-# ------------------------------
-def dyslexia_text_block(text: str):
-    st.markdown(
-        f"""
-        <div style="
-            font-size:20px;
-            line-height:1.6;
-            padding:12px;
-            border-radius:10px;
-            background: rgba(255,255,255,0.03);
-            border-left: 6px solid #00E5FF;
-            font-family: 'Verdana', 'Arial', sans-serif;
-            color: #F8FAFC;
-        ">
-            {safe_text(text)}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-# ------------------------------
-# ISL AVATAR (GIF / Video)
-# ------------------------------
-def isl_avatar(url_gif: str = None, url_video: str = None, width: int = 300):
-    """Render ISL avatar area; accepts gif or mp4 link."""
+# ---------------------------------------------------------------------
+# ISL avatar rendering helpers
+# ---------------------------------------------------------------------
+def isl_avatar(url_gif: Optional[str] = None, url_video: Optional[str] = None, width: int = 300):
+    """
+    Render an ISL assistant area. Accepts either a gif or mp4 link.
+    Falls back to a simple link if the media fails to render.
+    """
+    # show gif if provided
     if url_gif:
         try:
             st.image(url_gif, width=width, caption="ISL Assistant")
         except Exception:
-            # fallback: show url as link if image fails
             st.write(f"ISL GIF: {url_gif}")
+
+    # show video if provided
     if url_video:
         try:
             st.video(url_video)
@@ -107,21 +127,21 @@ def isl_avatar(url_gif: str = None, url_video: str = None, width: int = 300):
             st.write(f"ISL Video: {url_video}")
 
 
-# ------------------------------
-# NEON THEME (Streamlit-safe CSS)
-# ------------------------------
+# ---------------------------------------------------------------------
+# Theme + small CSS that is Streamlit-safe
+# ---------------------------------------------------------------------
 def apply_theme():
-    """Apply neon / accessible theme with mode-aware tweaks."""
+    """Apply a neon + accessible theme via unsafe html (Streamlit)."""
     st.markdown(
         """
         <style>
         /* Page background */
-        .css-18e3th9 {  /* streamlit main */
+        .css-18e3th9 {  /* target common Streamlit main container */
             background: radial-gradient(circle at 10% 20%, #071029 0%, #02040a 60%, #000000 100%);
             color: #E6EEF3;
         }
 
-        /* Neon headers */
+        /* Neon headers and title */
         .neon-title {
             font-size: 28px;
             font-weight: 700;
@@ -141,7 +161,7 @@ def apply_theme():
             font-size: 18px;
         }
 
-        /* Neon buttons */
+        /* Buttons */
         .stButton>button {
             border-radius: 999px;
             padding: 8px 18px;
@@ -157,24 +177,24 @@ def apply_theme():
             color: white;
         }
 
-        /* Radio/label color */
-        div[role="radiogroup"] > label, div[role="radiogroup"] {
-            color: #E6EEF3 !important;
-        }
-
-        /* File uploader look */
+        /* File uploader style */
         div[data-testid="stFileUploader"] {
             border-radius: 12px;
             border: 2px dashed rgba(99,102,241,0.12);
             padding: 12px;
             background: rgba(255,255,255,0.01);
         }
+
+        /* Radio text color */
+        div[role="radiogroup"] > label, div[role="radiogroup"] {
+            color: #E6EEF3 !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    # Per-mode CSS tweaks if user selected mode already
+    # Mode-specific font tweaks (optional)
     m = st.session_state.get("mode", "standard")
     if m == "dyslexia":
         st.markdown(
@@ -199,23 +219,22 @@ def apply_theme():
         )
 
 
-# ------------------------------
-# RENDER MODE PICKER (exposed to app.py)
-# ------------------------------
+# ---------------------------------------------------------------------
+# Mode picker (exposed to app.py)
+# ---------------------------------------------------------------------
 def render_mode_picker():
     """
-    Renders the mode picker. Sets `st.session_state.mode` to one of:
-    'standard', 'dyslexia', 'adhd', 'isl', 'hybrid'
+    Renders a mode picker at the top of the app. Sets st.session_state.mode.
+    Possible modes: standard, dyslexia, adhd, isl, hybrid
     """
     st.markdown('<div class="neon-title">🧭 Choose Accessibility Mode</div>', unsafe_allow_html=True)
 
-    # Show short descriptions with radio choices
     choices = [
         "Standard",
         "Dyslexia Mode (readability)",
         "ADHD Assist (focus)",
         "ISL (Indian Sign Language)",
-        "Hybrid Accessibility (Best of all)"
+        "Hybrid Accessibility (Best of all)",
     ]
 
     choice = st.radio("Mode", choices, index=0, horizontal=True)
@@ -230,151 +249,216 @@ def render_mode_picker():
 
     if st.button("Continue ➜"):
         st.session_state.mode = label_to_key.get(choice, "standard")
-        # small default init values helpful for adhd focus
+        # initialize small defaults helpful for ADHD
         if st.session_state.mode == "adhd":
-            st.session_state.adhd_opt = 0
+            # do not collide with later per-question keys
+            st.session_state["global_adhd_init"] = True
         st.experimental_rerun()
 
 
-# ------------------------------
-# RENDER SUBJECT PICKER (exposed to app.py)
-# ------------------------------
+# ---------------------------------------------------------------------
+# Subject picker (exposed to app.py)
+# ---------------------------------------------------------------------
 def render_subject_picker():
-    """
-    Renders the subject picker. Sets `st.session_state.subject` to 'math' or 'english'.
-    """
     st.markdown('<div class="neon-title">📚 Choose Subject</div>', unsafe_allow_html=True)
-
     subject = st.selectbox("Select subject", ["Math", "English"], index=0)
     if st.button("Start Quiz 🚀"):
         st.session_state.subject = subject.lower()
         st.experimental_rerun()
 
 
-# ------------------------------
-# MAIN QUESTION RENDERER (exposed to app.py)
-# ------------------------------
-def render_question_UI(question: dict):
-    """
-    Renders a question object. Includes safety checks so the UI never crashes.
-    """
-    if not question:
-        st.error("❌ Invalid question data. Skipping...")
-        return None
-
-    # SAFETY CHECK → Required fields
-    text = question.get("question")
-    options = question.get("options")
-
-    if not text:
-        st.error("❌ Question text missing. Skipping...")
-        return None
-
-    if not options or not isinstance(options, list) or len(options) == 0:
-        st.error("❌ This question has no valid answer options. Skipping...")
-        return None
-
-    qkey = f"selected_{question.get('id', 'q')}"
-    mode = st.session_state.get("mode", "standard")
-
-    # Header
-    st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
-
-    # ISL avatar
-    if mode in ("isl", "hybrid"):
-        st.markdown("### 🤟 ISL Assistant")
-        isl_avatar(question.get("isl_gif"), question.get("isl_video"))
-
-    # Dyslexia mode / Hybrid
-    if mode in ("dyslexia", "hybrid"):
-        t_choice = st.selectbox(
-            "Reading view",
-            ["normal", "lower", "upper", "spaced"],
-            key=f"view_{question.get('id','v')}"
-        )
-        transformed = dyslexia_transform(text, t_choice)
-        dyslexia_text_block(transformed)
-    else:
-        st.markdown(f'<div class="neon-box">{safe_text(text)}</div>', unsafe_allow_html=True)
-
-    st.markdown("")
-
-    # ADHD MODE → one option at a time
-    if mode == "adhd":
-        if "adhd_opt" not in st.session_state:
-            st.session_state.adhd_opt = 0
-
-        idx = st.session_state.adhd_opt
-        total = len(options)
-
-        if idx >= total:
-            st.session_state.adhd_opt = 0
-            idx = 0
-
-        adhd_highlight_block(f"Option {idx+1} of {total}: {options[idx]}")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Next Option ➜", key=f"next_opt_{question.get('id','n')}") and idx < total - 1:
-                st.session_state.adhd_opt = idx + 1
-                st.experimental_rerun()
-        with col2:
-            if st.button("Select This Option", key=f"choose_opt_{question.get('id','c')}"):
-                st.session_state[qkey] = options[idx]
-                return options[idx]
-
-        return None
-
-    # NORMAL / DYSLEXIA / HYBRID / ISL (radio options)
-    selected = st.radio(
-        "Choose your answer:",
-        options,
-        key=qkey
-    )
-
-    # SAFETY: Only store if valid
-    if selected is not None:
-        st.session_state[qkey] = selected
-
-    # Hints
-    if mode in ("dyslexia", "hybrid"):
-        with st.expander("💡 Hints"):
-            for h in question.get("hints", []):
-                st.markdown(f"- {safe_text(h)}")
-
-    # TTS
-    if question.get("tts_text") and mode in ("standard", "dyslexia", "hybrid", "adhd"):
-        if st.button("🔊 Read Aloud", key=f"tts_{question.get('id','t')}"):
-            try:
-                snippet = tts_audio_snippet(question.get("tts_text"))
-                st.markdown(snippet, unsafe_allow_html=True)
-            except Exception:
-                st.warning("TTS playback failed.")
-
-    if mode == "isl":
-        st.caption("Tip: Watch the ISL assistant before selecting the answer.")
-
-    return selected
-
-
-# ------------------------------
-# SMALL UTILITY: CONFETTI / CELEBRATE
-# ------------------------------
+# ---------------------------------------------------------------------
+# Celebrate helper
+# ---------------------------------------------------------------------
 def celebrate():
-    # Streamlit has st.balloons(); keep it safe
     try:
         st.balloons()
     except Exception:
         pass
 
 
-# ------------------------------
-# DEBUG / DEV: quick status panel
-# ------------------------------
+# ---------------------------------------------------------------------
+# Debug panel
+# ---------------------------------------------------------------------
 def debug_panel():
     if st.checkbox("Show debug", key="debug_ui"):
-        st.json({
-            "mode": st.session_state.get("mode"),
-            "subject": st.session_state.get("subject"),
-            "adhd_opt": st.session_state.get("adhd_opt"),
-        })
+        # minimize sensitive info
+        try:
+            st.json({
+                "mode": st.session_state.get("mode"),
+                "subject": st.session_state.get("subject"),
+                "session_keys": list(st.session_state.keys()),
+            })
+        except Exception:
+            st.write("Debug panel error:")
+            st.text(traceback.format_exc())
+
+
+# ---------------------------------------------------------------------
+# Main question renderer (robust full implementation)
+# ---------------------------------------------------------------------
+def render_question_UI(question: dict):
+    """
+    Renders a question object safely.
+    Expected question keys:
+      - id (str)
+      - question (str)
+      - options (list[str])
+      - answer (str) [not required for rendering]
+      - difficulty (str) optional
+      - isl_gif, isl_video optional
+      - hints optional list
+      - tts_text optional
+    Returns the selected option (or None).
+    This function avoids modifying session_state inside layout contexts to prevent StreamlitAPIException.
+    """
+
+    # Basic sanity checks
+    if not question or not isinstance(question, dict):
+        st.error("❌ Invalid question object.")
+        return None
+
+    text = question.get("question")
+    options = question.get("options")
+
+    if not text:
+        st.error("❌ Question text missing.")
+        return None
+
+    if not options or not isinstance(options, list) or len(options) == 0:
+        st.error("❌ This question has no valid answer options.")
+        return None
+
+    qid = question.get("id", "q")
+    qkey = f"selected_{qid}"
+    mode = st.session_state.get("mode", "standard")
+
+    # Header
+    st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
+
+    # ISL assistant (gif/video)
+    if mode in ("isl", "hybrid"):
+        st.markdown("### 🤟 ISL Assistant")
+        isl_avatar(question.get("isl_gif"), question.get("isl_video"))
+
+    # Render question text — dyslexia support
+    if mode in ("dyslexia", "hybrid"):
+        view_key = f"view_{qid}"
+        # ensure key exists to keep stable layout
+        default_view = st.session_state.get(view_key, "normal")
+        view = st.selectbox("Reading view", ["normal", "lower", "upper", "spaced"], index=["normal","lower","upper","spaced"].index(default_view), key=view_key)
+        st.session_state[view_key] = view  # persist chosen view
+        dyslexia_text_block(dyslexia_transform(text, view))
+    else:
+        st.markdown(f'<div class="neon-box">{safe_text(text)}</div>', unsafe_allow_html=True)
+
+    st.markdown("")  # spacer
+
+    # ------------------------------
+    # ADHD mode (safe implementation)
+    # ------------------------------
+    if mode == "adhd":
+        # Use a per-question index key to avoid global collisions
+        idx_key = f"adhd_idx_{qid}"
+
+        # Initialize index safely BEFORE layout calls
+        if idx_key not in st.session_state:
+            st.session_state[idx_key] = 0
+
+        idx = int(st.session_state.get(idx_key, 0))
+        total = len(options)
+
+        # clamp index
+        if idx < 0:
+            idx = 0
+            st.session_state[idx_key] = 0
+        if idx >= total:
+            st.session_state[idx_key] = 0
+            idx = 0
+
+        # Show highlighted single option
+        adhd_highlight_block(f"Option {idx+1} of {total}: {options[idx]}")
+
+        # Buttons — do not mutate session_state inside "with col" blocks to avoid Streamlit errors.
+        # We'll use buttons returned by layout columns directly.
+        col1, col2 = st.columns(2)
+        # Next option
+        if col1.button("Next Option ➜", key=f"adhd_next_{qid}"):
+            st.session_state[idx_key] = idx + 1
+            st.experimental_rerun()
+        # Select this option
+        if col2.button("Select This Option", key=f"adhd_select_{qid}"):
+            st.session_state[qkey] = options[idx]
+            return options[idx]
+
+        # Still in ADHD flow -> return None until selection
+        return None
+
+    # ------------------------------
+    # Normal / dyslexia / hybrid / isl mode
+    # ------------------------------
+    # Radio selection — use a stable key
+    try:
+        # create radio; Streamlit will handle rendering and key binding
+        selected = st.radio("Choose your answer:", options, key=qkey)
+    except Exception as e:
+        # defensive fallback: if radio fails for any reason, show small selectbox
+        st.warning("UI fallback activated due to rendering issue.")
+        selected = st.selectbox("Choose your answer (fallback):", options, key=f"{qkey}_fallback")
+
+    # Validate and persist selection safely
+    if selected is not None:
+        try:
+            st.session_state[qkey] = selected
+        except Exception:
+            # As a last resort, swallow session errors and store in a safe alternate key
+            st.session_state[f"_safe_{qkey}"] = selected
+
+    # Hints for dyslexia/hybrid
+    if mode in ("dyslexia", "hybrid"):
+        hints = question.get("hints", [])
+        if hints:
+            with st.expander("💡 Hints"):
+                for h in hints:
+                    st.markdown(f"- {safe_text(h)}")
+
+    # TTS playback
+    tts_text = question.get("tts_text")
+    if tts_text and mode in ("standard", "dyslexia", "hybrid", "adhd"):
+        if st.button("🔊 Read Aloud", key=f"tts_{qid}"):
+            snippet = tts_audio_snippet(tts_text)
+            if snippet:
+                st.markdown(snippet, unsafe_allow_html=True)
+            else:
+                st.warning("TTS could not be generated in this environment.")
+
+    # Small ISL tip
+    if mode == "isl":
+        st.caption("Tip: Watch the ISL assistant and then select the answer.")
+
+    return selected
+
+
+# ---------------------------------------------------------------------
+# Small status / developer panel (non-intrusive)
+# ---------------------------------------------------------------------
+def small_status_panel():
+    col1, col2, col3 = st.columns([3, 2, 1])
+    with col1:
+        st.write("")  # reserved for future quick info
+    with col2:
+        if st.button("🎯 Quick Restart"):
+            st.experimental_rerun()
+    with col3:
+        if st.button("🔁 Reset UI State"):
+            # Keep only very small subset if desired, otherwise full clear
+            keys_to_keep = []
+            for k in list(st.session_state.keys()):
+                if k not in keys_to_keep:
+                    del st.session_state[k]
+            st.experimental_rerun()
+
+
+# ---------------------------------------------------------------------
+# End of file
+# ---------------------------------------------------------------------
