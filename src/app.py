@@ -4,17 +4,20 @@ from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
-from live.live_sync import init_live_session, live_session_page
 from revision.revision_ui import render_revision_page
 
 
-# ---------------- reset ----------------
+# ---------------------------------------------------------
+# RESET APP
+# ---------------------------------------------------------
 def reset_app():
     st.session_state.clear()
     st.rerun()
 
 
-# ---------------- sidebar nav ----------------
+# ---------------------------------------------------------
+# SIDEBAR NAVIGATION
+# ---------------------------------------------------------
 def sidebar_navigation():
     pages = {
         "📘 Solo Quiz": "solo",
@@ -23,33 +26,37 @@ def sidebar_navigation():
         "📊 Dashboard": "dashboard",
         "🤖 Admin / AI Quiz Builder": "admin_ai",
     }
-    choice = st.sidebar.radio("Navigation", list(pages.keys()))
-    return pages[choice]
+    return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
 
-# ---------------- ensure engine ----------------
+# ---------------------------------------------------------
+# ENSURE ENGINE EXISTS
+# ---------------------------------------------------------
 def ensure_engine(mode: str, subject: str):
+    """Create QuizEngine if not present."""
     if "engine" not in st.session_state:
         st.session_state["engine"] = QuizEngine(mode, subject)
     return st.session_state["engine"]
 
 
-# ---------------- solo quiz page ----------------
+# ---------------------------------------------------------
+# SOLO QUIZ PAGE
+# ---------------------------------------------------------
 def solo_quiz_page():
     st.header("📘 Solo Quiz")
 
-    # mode and subject are chosen here every time (no complex state)
+    # Accessibility + Subject selection
     mode = st.selectbox(
-        "Accessibility mode",
+        "Accessibility Mode",
         ["standard", "dyslexia", "adhd", "isl", "hybrid"],
         index=0,
     )
 
-    subject_label = st.selectbox("Subject", ["Math", "English"], index=0)
+    subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
+    # Start/Restart
     if st.button("Start / Restart Quiz"):
-        # fresh engine
         st.session_state["engine"] = QuizEngine(mode, subject)
 
     engine: QuizEngine | None = st.session_state.get("engine")
@@ -58,11 +65,13 @@ def solo_quiz_page():
         st.info("Click 'Start / Restart Quiz' to begin.")
         return
 
-    # update engine mode if user changes mode mid-quiz
+    # Sync engine mode & subject
     engine.mode = mode
     engine.subject = subject
 
+    # Get current question
     question = engine.get_current_question()
+
     if question is None:
         st.success("🎉 Quiz complete!")
         if st.button("📊 View Dashboard"):
@@ -70,17 +79,19 @@ def solo_quiz_page():
             st.rerun()
         return
 
-    # render question
+    # Render question UI
     selected = render_question_UI(question, mode)
 
     col1, col2 = st.columns(2)
 
+    # Back Button
     with col1:
         if engine.current_index > 0:
             if st.button("⬅ Back"):
                 engine.current_index -= 1
                 st.rerun()
 
+    # Next Button
     with col2:
         if st.button("Next ➜"):
             if selected is not None:
@@ -92,26 +103,43 @@ def solo_quiz_page():
             st.rerun()
 
 
-# ---------------- router ----------------
+# ---------------------------------------------------------
+# ROUTER
+# ---------------------------------------------------------
 def route_page(page_name: str):
+
     if page_name == "solo":
         solo_quiz_page()
+
     elif page_name == "dashboard":
         render_dashboard(st.session_state.get("engine"))
+
     elif page_name == "revision":
         render_revision_page(st.session_state.get("engine"))
+
     elif page_name == "live":
-        init_live_session()
-        live_session_page(st.session_state.get("engine"), {})
+        engine = st.session_state.get("engine")
+        if not engine:
+            st.warning("Start a quiz first to initialize the question engine.")
+            return
+
+        from live.live_sync import live_session_page
+        live_session_page(engine, {})
+        return
+
     elif page_name == "admin_ai":
         ai_quiz_builder()
+
     else:
         st.error("Unknown page.")
 
 
-# ---------------- main ----------------
+# ---------------------------------------------------------
+# MAIN ENTRY POINT
+# ---------------------------------------------------------
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
+
     apply_theme()
 
     if st.sidebar.button("🔁 Reset App"):
