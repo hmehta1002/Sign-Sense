@@ -1,13 +1,9 @@
-# src/frontend/ui.py
-
 import streamlit as st
 import html
 import urllib.parse
 
 
-# ---------------------------------------------------
-# Small helpers
-# ---------------------------------------------------
+# ----------------- small helpers -----------------
 def safe_text(s: str) -> str:
     return html.escape(s or "")
 
@@ -22,9 +18,7 @@ def tts_audio_snippet(text: str, voice: str = "Brian") -> str:
         return ""
 
 
-# ---------------------------------------------------
-# Dyslexia helpers
-# ---------------------------------------------------
+# ----------------- dyslexia helpers -----------------
 def dyslexia_transform(text: str, view: str) -> str:
     if not text:
         return text
@@ -57,9 +51,7 @@ def dyslexia_text_block(text: str):
     )
 
 
-# ---------------------------------------------------
-# ADHD highlight
-# ---------------------------------------------------
+# ----------------- ADHD highlight -----------------
 def adhd_highlight_block(text: str):
     st.markdown(
         f"""
@@ -80,9 +72,7 @@ def adhd_highlight_block(text: str):
     )
 
 
-# ---------------------------------------------------
-# ISL avatar
-# ---------------------------------------------------
+# ----------------- ISL avatar -----------------
 def isl_avatar(url_gif: str | None = None, url_video: str | None = None, width: int = 300):
     if url_gif:
         try:
@@ -97,9 +87,7 @@ def isl_avatar(url_gif: str | None = None, url_video: str | None = None, width: 
             st.write(f"ISL Video: {url_video}")
 
 
-# ---------------------------------------------------
-# Theme (neon)
-# ---------------------------------------------------
+# ----------------- neon theme -----------------
 def apply_theme():
     st.markdown(
         """
@@ -144,53 +132,11 @@ def apply_theme():
     )
 
 
-# ---------------------------------------------------
-# Mode picker
-# ---------------------------------------------------
-def render_mode_picker():
-    st.markdown('<div class="neon-title">🧭 Choose Accessibility Mode</div>', unsafe_allow_html=True)
-
-    choices = [
-        "Standard",
-        "Dyslexia Mode (readability)",
-        "ADHD Assist (focus)",
-        "ISL (Indian Sign Language)",
-        "Hybrid Accessibility (Best of all)",
-    ]
-
-    choice = st.radio("Mode", choices, index=0, horizontal=True)
-
-    mapping = {
-        "Standard": "standard",
-        "Dyslexia Mode (readability)": "dyslexia",
-        "ADHD Assist (focus)": "adhd",
-        "ISL (Indian Sign Language)": "isl",
-        "Hybrid Accessibility (Best of all)": "hybrid",
-    }
-
-    if st.button("Continue ➜"):
-        st.session_state["mode"] = mapping[choice]
-        st.rerun()
-
-
-# ---------------------------------------------------
-# Subject picker
-# ---------------------------------------------------
-def render_subject_picker():
-    st.markdown('<div class="neon-title">📚 Choose Subject</div>', unsafe_allow_html=True)
-    subject = st.selectbox("Select subject", ["Math", "English"], index=0)
-    if st.button("Start Quiz 🚀"):
-        st.session_state["subject"] = subject.lower()
-        st.rerun()
-
-
-# ---------------------------------------------------
-# MAIN QUESTION UI (NO manual session_state writes)
-# ---------------------------------------------------
-def render_question_UI(question: dict):
+# ----------------- question renderer -----------------
+def render_question_UI(question: dict, mode: str):
     """
-    Render a question safely and return the selected option (or None).
-    No direct writes to st.session_state except widget-managed keys.
+    Render a question and return the selected answer (or None).
+    DOES NOT write to st.session_state.
     """
 
     if not question or not isinstance(question, dict):
@@ -209,17 +155,16 @@ def render_question_UI(question: dict):
         return None
 
     qid = question.get("id", "q")
-    mode = st.session_state.get("mode", "standard")
 
-    # Header
+    # Title
     st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
 
-    # ISL section
+    # ISL area
     if mode in ("isl", "hybrid"):
         st.markdown("### 🤟 ISL Assistant")
         isl_avatar(question.get("isl_gif"), question.get("isl_video"))
 
-    # Question text (with dyslexia support)
+    # Text rendering
     if mode in ("dyslexia", "hybrid"):
         view = st.selectbox(
             "Reading view",
@@ -231,11 +176,10 @@ def render_question_UI(question: dict):
     else:
         st.markdown(f'<div class="neon-box">{safe_text(text)}</div>', unsafe_allow_html=True)
 
-    st.markdown("")  # spacer
+    st.markdown("")
 
-    # ---------------- ADHD MODE ----------------
+    # ADHD mode: focus on one option via a simple index control
     if mode == "adhd":
-        # Use a widget-managed index instead of manual session_state writes
         idx = st.number_input(
             "Focus on option number",
             min_value=1,
@@ -244,16 +188,16 @@ def render_question_UI(question: dict):
             step=1,
             key=f"adhd_idx_{qid}",
         )
-        idx_int = int(idx)
-        label = options[idx_int - 1]
-        adhd_highlight_block(f"Option {idx_int} of {len(options)}: {label}")
+        idx = int(idx)
+        label = options[idx - 1]
+        adhd_highlight_block(f"Option {idx} of {len(options)}: {label}")
 
         if st.button("Select This Option", key=f"adhd_select_{qid}"):
             return label
 
         return None
 
-    # ---------------- NORMAL / DYSLEXIA / HYBRID / ISL ----------------
+    # Normal / dyslexia / hybrid / isl: simple radio
     selected = st.radio(
         "Choose your answer:",
         options,
@@ -268,7 +212,7 @@ def render_question_UI(question: dict):
                 for h in hints:
                     st.markdown(f"- {safe_text(h)}")
 
-    # TTS
+    # TTS button
     tts_text = question.get("tts_text")
     if tts_text:
         if st.button("🔊 Read Aloud", key=f"tts_{qid}"):
@@ -282,18 +226,3 @@ def render_question_UI(question: dict):
         st.caption("Watch the ISL assistant and then select your answer.")
 
     return selected
-
-
-# ---------------------------------------------------
-# Extra helpers used elsewhere (optional)
-# ---------------------------------------------------
-def celebrate():
-    try:
-        st.balloons()
-    except Exception:
-        pass
-
-
-def debug_panel():
-    if st.checkbox("Show debug (dev)", key="debug_ui"):
-        st.json({k: v for k, v in st.session_state.items()})
