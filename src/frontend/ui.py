@@ -1,34 +1,159 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import html
 import urllib.parse
 
 
-# ----------------- small helpers -----------------
+# ---------------------------------------------------
+# Helpers
+# ---------------------------------------------------
 def safe_text(s: str) -> str:
     return html.escape(s or "")
 
 
-def tts_audio_snippet(text: str, voice: str = "Brian") -> str:
-    """Return an HTML <audio> snippet that plays TTS from StreamElements."""
-    try:
-        q = urllib.parse.quote(str(text))
-        url = f"https://api.streamelements.com/kappa/v2/speech?voice={voice}&text={q}"
-        return f'<audio autoplay><source src="{url}" type="audio/mpeg"></audio>'
-    except Exception:
-        return ""
+# ---------------------------------------------------
+# NEW: Browser-based Female TTS with Controls
+# ---------------------------------------------------
+def browser_tts_button(text: str, key: str):
+    safe_t = (
+        text.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", " ")
+        .replace("\r", " ")
+    )
+
+    html_code = f"""
+    <div id="tts-container-{key}" style="margin-top:8px; padding:12px; border-radius:10px;
+        background:rgba(15,23,42,0.45); border:1px solid rgba(148,163,184,0.28);">
+
+      <div style="margin-bottom:6px; font-weight:600; color:#E5E7EB;">
+        🔊 Read Aloud (Female Voice)
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#E5E7EB;">
+        <label>Speed: <span id="rate_val_{key}">1.0</span>x</label>
+        <input type="range" id="rate_{key}" min="0.5" max="1.5" value="1.0" step="0.1" />
+
+        <label>Pitch: <span id="pitch_val_{key}">1.1</span></label>
+        <input type="range" id="pitch_{key}" min="0.5" max="2.0" value="1.1" step="0.1" />
+
+        <label>Volume: <span id="vol_val_{key}">1.0</span></label>
+        <input type="range" id="vol_{key}" min="0.2" max="1.0" value="1.0" step="0.1" />
+      </div>
+
+      <button id="speak_btn_{key}" style="
+          margin-top:10px;
+          padding:8px 14px;
+          background:#FF4ECD;
+          color:white;
+          border:none;
+          border-radius:8px;
+          cursor:pointer;
+          font-weight:600;
+      ">
+        ▶ Play
+      </button>
+    </div>
+
+    <script>
+      (function() {{
+        var txt = "{safe_t}";
+        var rateSlider = document.getElementById("rate_{key}");
+        var pitchSlider = document.getElementById("pitch_{key}");
+        var volSlider = document.getElementById("vol_{key}");
+        var rateLabel = document.getElementById("rate_val_{key}");
+        var pitchLabel = document.getElementById("pitch_val_{key}");
+        var volLabel = document.getElementById("vol_val_{key}");
+        var btn = document.getElementById("speak_btn_{key}");
+
+        if (!rateSlider || !pitchSlider || !volSlider || !btn) {{
+          return;
+        }}
+
+        function updateLabels() {{
+          rateLabel.textContent = rateSlider.value;
+          pitchLabel.textContent = pitchSlider.value;
+          volLabel.textContent = volSlider.value;
+        }}
+
+        updateLabels();
+        rateSlider.oninput = updateLabels;
+        pitchSlider.oninput = updateLabels;
+        volSlider.oninput = updateLabels;
+
+        function getFemaleVoice() {{
+          var voices = speechSynthesis.getVoices();
+          if (!voices || voices.length === 0) return null;
+
+          var preferred = [
+            "Google UK English Female",
+            "Microsoft Zira Desktop",
+            "Microsoft Heera Desktop",
+            "Microsoft Neerja Online",
+            "Microsoft Swara Online",
+            "Samantha",
+            "Joanna"
+          ];
+
+          var female = null;
+
+          for (var i = 0; i < voices.length; i++) {{
+            if (preferred.includes(voices[i].name)) {{
+              female = voices[i];
+              break;
+            }}
+          }}
+
+          if (!female) {{
+            for (var i = 0; i < voices.length; i++) {{
+              let name = voices[i].name.toLowerCase();
+              if (name.includes("female") || name.includes("woman") || name.includes("zira")) {{
+                female = voices[i];
+                break;
+              }}
+            }}
+          }}
+
+          if (!female) female = voices[0];
+          return female;
+        }}
+
+        function speak() {{
+          speechSynthesis.cancel();
+          var utter = new SpeechSynthesisUtterance(txt);
+
+          var v = getFemaleVoice();
+          if (v) utter.voice = v;
+
+          utter.rate = parseFloat(rateSlider.value);
+          utter.pitch = parseFloat(pitchSlider.value);
+          utter.volume = parseFloat(volSlider.value);
+
+          speechSynthesis.speak(utter);
+        }}
+
+        btn.onclick = speak;
+        window.speechSynthesis.onvoiceschanged = function() {{
+          // preload
+        }};
+      }})();
+    </script>
+    """
+
+    components.html(html_code, height=220)
 
 
-# ----------------- dyslexia helpers -----------------
+# ---------------------------------------------------
+# Dyslexia helpers
+# ---------------------------------------------------
 def dyslexia_transform(text: str, view: str) -> str:
-    if not text:
-        return text
     if view == "lower":
         return text.lower()
     if view == "upper":
         return text.upper()
     if view == "spaced":
         return "  ".join(text.split())
-    return text  # normal
+    return text
 
 
 def dyslexia_text_block(text: str):
@@ -39,10 +164,10 @@ def dyslexia_text_block(text: str):
             line-height:1.6;
             padding:12px;
             border-radius:10px;
-            background: rgba(255,255,255,0.03);
-            border-left: 6px solid #00E5FF;
-            font-family: 'Verdana', 'Arial', sans-serif;
-            color: #F8FAFC;
+            background: rgba(255,255,255,0.05);
+            border-left: 5px solid #00E5FF;
+            font-family:'Verdana', sans-serif;
+            color:#F8FAFC;
         ">
             {safe_text(text)}
         </div>
@@ -51,16 +176,18 @@ def dyslexia_text_block(text: str):
     )
 
 
-# ----------------- ADHD highlight -----------------
+# ---------------------------------------------------
+# ADHD highlight
+# ---------------------------------------------------
 def adhd_highlight_block(text: str):
     st.markdown(
         f"""
         <div style="
             padding: 14px;
             margin-top: 8px;
-            border-radius: 10px;
-            background: linear-gradient(90deg, rgba(0,180,255,0.08), rgba(123,97,255,0.04));
-            border: 1px solid rgba(0,200,255,0.12);
+            border-radius: 12px;
+            background: rgba(6,182,212,0.16);
+            border: 1px solid rgba(6,182,212,0.22);
             font-size: 18px;
             font-weight: 600;
             color: #E6F7FF;
@@ -72,59 +199,43 @@ def adhd_highlight_block(text: str):
     )
 
 
-# ----------------- ISL avatar -----------------
-def isl_avatar(url_gif: str | None = None, url_video: str | None = None, width: int = 300):
+# ---------------------------------------------------
+# ISL avatar
+# ---------------------------------------------------
+def isl_avatar(url_gif=None, url_video=None, width=300):
     if url_gif:
         try:
-            st.image(url_gif, width=width, caption="ISL Assistant")
-        except Exception:
-            st.write(f"ISL GIF: {url_gif}")
+            st.image(url_gif, width=width)
+        except:
+            st.write(url_gif)
 
     if url_video:
         try:
             st.video(url_video)
-        except Exception:
-            st.write(f"ISL Video: {url_video}")
+        except:
+            st.write(url_video)
 
 
-# ----------------- neon theme -----------------
+# ---------------------------------------------------
+# Neon theme
+# ---------------------------------------------------
 def apply_theme():
     st.markdown(
         """
         <style>
-        .css-18e3th9 {
-            background: radial-gradient(circle at 10% 20%, #071029 0%, #02040a 60%, #000000 100%);
-            color: #E6EEF3;
-        }
         .neon-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #A5F3FC;
-            text-shadow: 0 0 18px rgba(165,243,252,0.12);
-            margin-bottom: 10px;
+            font-size:26px; font-weight:700;
+            color:#A5F3FC;
+            text-shadow:0 0 10px rgba(165,243,252,0.3);
+            margin-bottom:10px;
         }
         .neon-box {
-            padding: 14px 18px;
-            border-radius: 12px;
-            background: rgba(10,14,24,0.8);
-            border: 1px solid rgba(99,102,241,0.14);
-            box-shadow: 0 6px 22px rgba(99,102,241,0.04);
-            color: #F8FAFC;
-            font-size: 18px;
-        }
-        .stButton>button {
-            border-radius: 999px;
-            padding: 8px 18px;
-            font-weight: 700;
-            background: linear-gradient(90deg,#7C3AED,#06B6D4);
-            color: #041425;
-            border: none;
-            box-shadow: 0 4px 14px rgba(124,58,237,0.18);
-        }
-        .stButton>button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(6,182,212,0.18);
-            color: white;
+            padding:14px 18px;
+            border-radius:12px;
+            background:rgba(10,14,24,0.8);
+            border:1px solid rgba(99,102,241,0.15);
+            color:#F8FAFC;
+            font-size:18px;
         }
         </style>
         """,
@@ -132,56 +243,41 @@ def apply_theme():
     )
 
 
-# ----------------- question renderer -----------------
+# ---------------------------------------------------
+# MAIN QUESTION UI (SAFE)
+# ---------------------------------------------------
 def render_question_UI(question: dict, mode: str):
-    """
-    Render a question and return the selected answer (or None).
-    DOES NOT write to st.session_state.
-    """
 
-    if not question or not isinstance(question, dict):
-        st.error("Invalid question data.")
+    if not question:
+        st.error("Invalid question.")
         return None
 
-    text = question.get("question")
-    options = question.get("options") or []
-
-    if not text:
-        st.error("Question text missing.")
-        return None
-
-    if not options:
-        st.error("No answer options for this question.")
-        return None
-
+    text = question.get("question", "")
+    options = question.get("options", [])
     qid = question.get("id", "q")
 
-    # Title
     st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
 
-    # ISL area
+    # ISL
     if mode in ("isl", "hybrid"):
-        st.markdown("### 🤟 ISL Assistant")
+        st.subheader("🤟 ISL Assistant")
         isl_avatar(question.get("isl_gif"), question.get("isl_video"))
 
-    # Text rendering
+    # Dyslexia mode
     if mode in ("dyslexia", "hybrid"):
         view = st.selectbox(
             "Reading view",
             ["normal", "lower", "upper", "spaced"],
-            key=f"view_{qid}",
+            key=f"view_{qid}"
         )
-        transformed = dyslexia_transform(text, view)
-        dyslexia_text_block(transformed)
+        dyslexia_text_block(dyslexia_transform(text, view))
     else:
         st.markdown(f'<div class="neon-box">{safe_text(text)}</div>', unsafe_allow_html=True)
 
-    st.markdown("")
-
-    # ADHD mode: focus on one option via a simple index control
+    # ADHD mode
     if mode == "adhd":
         idx = st.number_input(
-            "Focus on option number",
+            "Focus on option",
             min_value=1,
             max_value=len(options),
             value=1,
@@ -189,40 +285,28 @@ def render_question_UI(question: dict, mode: str):
             key=f"adhd_idx_{qid}",
         )
         idx = int(idx)
-        label = options[idx - 1]
-        adhd_highlight_block(f"Option {idx} of {len(options)}: {label}")
+        choice = options[idx - 1]
+        adhd_highlight_block(f"{choice}")
 
         if st.button("Select This Option", key=f"adhd_select_{qid}"):
-            return label
+            return choice
 
         return None
 
-    # Normal / dyslexia / hybrid / isl: simple radio
-    selected = st.radio(
-        "Choose your answer:",
-        options,
-        key=f"answer_{qid}",
-    )
+    # Radio for normal modes
+    selected = st.radio("Choose your answer:", options, key=f"answer_{qid}")
 
     # Hints
     if mode in ("dyslexia", "hybrid"):
-        hints = question.get("hints") or []
+        hints = question.get("hints", [])
         if hints:
             with st.expander("💡 Hints"):
                 for h in hints:
-                    st.markdown(f"- {safe_text(h)}")
+                    st.write("- ", h)
 
-    # TTS button
+    # TTS
     tts_text = question.get("tts_text")
     if tts_text:
-        if st.button("🔊 Read Aloud", key=f"tts_{qid}"):
-            snippet = tts_audio_snippet(tts_text)
-            if snippet:
-                st.markdown(snippet, unsafe_allow_html=True)
-            else:
-                st.warning("TTS playback failed.")
-
-    if mode == "isl":
-        st.caption("Watch the ISL assistant and then select your answer.")
+        browser_tts_button(tts_text, f"tts_{qid}")
 
     return selected
