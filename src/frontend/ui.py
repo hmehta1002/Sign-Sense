@@ -256,86 +256,105 @@ def render_subject_picker():
 # ------------------------------
 def render_question_UI(question: dict):
     """
-    Renders a question object. Expected fields:
-    - id (str), question (str), options (list[str]), answer (str),
-      difficulty (str, optional), isl_gif (url), isl_video (url), hints (list), tts_text (str)
-    Sets st.session_state.selected_answer when user picks.
-    Returns the selected option (also stored in session).
+    Renders a question object. Includes safety checks so the UI never crashes.
     """
-    # ensure selected_answer key exists for this question id
+    if not question:
+        st.error("❌ Invalid question data. Skipping...")
+        return None
+
+    # SAFETY CHECK → Required fields
+    text = question.get("question")
+    options = question.get("options")
+
+    if not text:
+        st.error("❌ Question text missing. Skipping...")
+        return None
+
+    if not options or not isinstance(options, list) or len(options) == 0:
+        st.error("❌ This question has no valid answer options. Skipping...")
+        return None
+
     qkey = f"selected_{question.get('id', 'q')}"
     mode = st.session_state.get("mode", "standard")
 
     # Header
     st.markdown('<div class="neon-title">🎯 Question</div>', unsafe_allow_html=True)
 
-    # ISL assistant (if available)
+    # ISL avatar
     if mode in ("isl", "hybrid"):
         st.markdown("### 🤟 ISL Assistant")
         isl_avatar(question.get("isl_gif"), question.get("isl_video"))
 
-    # Question text (dyslexia transform if needed)
+    # Dyslexia mode / Hybrid
     if mode in ("dyslexia", "hybrid"):
-        # show transform control
-        t_choice = st.selectbox("Reading view", ["normal", "lower", "upper", "spaced"], key=f"view_{question.get('id','v')}")
-        transformed = dyslexia_transform(question.get("question", ""), t_choice)
+        t_choice = st.selectbox(
+            "Reading view",
+            ["normal", "lower", "upper", "spaced"],
+            key=f"view_{question.get('id','v')}"
+        )
+        transformed = dyslexia_transform(text, t_choice)
         dyslexia_text_block(transformed)
     else:
-        st.markdown(f'<div class="neon-box">{safe_text(question.get("question", ""))}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="neon-box">{safe_text(text)}</div>', unsafe_allow_html=True)
 
-    st.markdown("")  # small spacer
+    st.markdown("")
 
-    # ADHD mode: show one option at a time for focus
+    # ADHD MODE → one option at a time
     if mode == "adhd":
-        opts = question.get("options", [])
         if "adhd_opt" not in st.session_state:
             st.session_state.adhd_opt = 0
+
         idx = st.session_state.adhd_opt
-        total = len(opts)
+        total = len(options)
+
         if idx >= total:
             st.session_state.adhd_opt = 0
             idx = 0
 
-        adhd_highlight_block(f"Option {idx+1} of {total}: {opts[idx]}")
-        col1, col2 = st.columns([1, 1])
+        adhd_highlight_block(f"Option {idx+1} of {total}: {options[idx]}")
+
+        col1, col2 = st.columns(2)
         with col1:
             if st.button("Next Option ➜", key=f"next_opt_{question.get('id','n')}") and idx < total - 1:
                 st.session_state.adhd_opt = idx + 1
                 st.experimental_rerun()
         with col2:
             if st.button("Select This Option", key=f"choose_opt_{question.get('id','c')}"):
-                st.session_state[qkey] = opts[idx]
-                # selection made — return immediately
-                return st.session_state.get(qkey)
+                st.session_state[qkey] = options[idx]
+                return options[idx]
 
-        return None  # in ADHD flow we stop here until user selects
+        return None
 
-    # Normal / dyslexia / isl / hybrid modes: show all options as radio
-    options = question.get("options", [])
-    # key per question so multiple questions don't clash in session
-    selected = st.radio("Choose your answer:", options, key=qkey)
-    st.session_state[qkey] = selected
+    # NORMAL / DYSLEXIA / HYBRID / ISL (radio options)
+    selected = st.radio(
+        "Choose your answer:",
+        options,
+        key=qkey
+    )
 
-    # Hints for dyslexia/hybrid
+    # SAFETY: Only store if valid
+    if selected is not None:
+        st.session_state[qkey] = selected
+
+    # Hints
     if mode in ("dyslexia", "hybrid"):
         with st.expander("💡 Hints"):
             for h in question.get("hints", []):
                 st.markdown(f"- {safe_text(h)}")
 
-    # Text-to-speech control (plays short TTS)
+    # TTS
     if question.get("tts_text") and mode in ("standard", "dyslexia", "hybrid", "adhd"):
         if st.button("🔊 Read Aloud", key=f"tts_{question.get('id','t')}"):
             try:
                 snippet = tts_audio_snippet(question.get("tts_text"))
                 st.markdown(snippet, unsafe_allow_html=True)
             except Exception:
-                st.warning("TTS playback failed in this environment.")
+                st.warning("TTS playback failed.")
 
-    # tiny UX tips for ISL mode
     if mode == "isl":
-        st.caption("Tip: Watch the ISL assistant and then select the answer.")
+        st.caption("Tip: Watch the ISL assistant before selecting the answer.")
 
-    return st.session_state.get(qkey)
+    return selected
 
 
 # ------------------------------
