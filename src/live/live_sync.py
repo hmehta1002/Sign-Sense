@@ -17,7 +17,7 @@ def room_path(code):
 
 
 # ---------------------------------------------------------
-# SAVE / LOAD ROOM
+# SAVE / LOAD ROOM STATE
 # ---------------------------------------------------------
 def load_room(code):
     try:
@@ -53,14 +53,15 @@ def create_room():
 def host_interface(engine):
     st.title("🎮 Live Host Dashboard")
 
-    # Host creates a room each time
+    # Create room
     if st.button("Create New Room"):
         room = create_room()
-        st.write(f"🔐 **Room Code:** `{room['code']}`")
-        st.write("Share this code with players.")
-        st.stop()
+        st.success(f"Room Created: **{room['code']}**")
+        st.info("Share this code with players.")
+        st.markdown("<meta http-equiv='refresh' content='2'>", unsafe_allow_html=True)
+        return
 
-    code = st.text_input("Enter an existing Room Code to host:")
+    code = st.text_input("Enter Room Code to Host:")
 
     if not code:
         st.info("Create or enter a room.")
@@ -73,13 +74,17 @@ def host_interface(engine):
 
     st.success(f"Hosting Room **{code}**")
 
-    # Player list
-    st.subheader("Players Joined")
-    for p in room["players"].keys():
-        st.write(f"👤 {p}")
+    # Players list
+    st.subheader("👥 Players Joined")
+    if room["players"]:
+        for p in room["players"].keys():
+            st.write(f"• {p}")
+    else:
+        st.write("No players yet.")
 
-    # Host controls
+    # Host Controls
     col1, col2, col3 = st.columns(3)
+
     if col1.button("▶ Start Quiz"):
         room["state"] = "playing"
         save_room(code, room)
@@ -92,7 +97,7 @@ def host_interface(engine):
         room["state"] = "finished"
         save_room(code, room)
 
-    # Show current question
+    # Current question
     if room["state"] == "playing":
         q_index = room["question_index"]
         if q_index < len(engine.questions):
@@ -108,9 +113,9 @@ def host_interface(engine):
     for name, info in room["players"].items():
         st.write(f"**{name}** – {info.get('score', 0)} points")
 
-    # Auto-refresh
-    time.sleep(1)
-    st.experimental_rerun()
+    # SAFE auto-refresh
+    st.markdown("<meta http-equiv='refresh' content='2'>", unsafe_allow_html=True)
+    return
 
 
 # ---------------------------------------------------------
@@ -119,11 +124,11 @@ def host_interface(engine):
 def player_interface(engine):
     st.title("🎮 Join Live Room")
 
-    name = st.text_input("Your name:")
+    name = st.text_input("Your Name:")
     code = st.text_input("Room Code:")
 
     if not name or not code:
-        st.info("Enter name + room code.")
+        st.info("Enter your name + room code to continue.")
         return
 
     room = load_room(code)
@@ -131,27 +136,27 @@ def player_interface(engine):
         st.error("Room not found.")
         return
 
-    # Register player if not already in room
+    # Add player if new
     if name not in room["players"]:
         room["players"][name] = {"answer": "", "score": 0}
         save_room(code, room)
 
-    st.success(f"Joined Room {code} as {name}")
+    st.success(f"Joined Room {code} as **{name}**")
 
-    # Wait for host
+    # Waiting for host
     if room["state"] == "waiting":
         st.info("Waiting for host to start…")
-        time.sleep(1)
-        st.experimental_rerun()
+        st.markdown("<meta http-equiv='refresh' content='2'>", unsafe_allow_html=True)
+        return
 
-    # Session finished
+    # Finished
     if room["state"] == "finished":
         st.success("Session finished!")
         st.subheader("Your Final Score:")
         st.write(room["players"][name]["score"])
         return
 
-    # Show current question
+    # Current question
     q_index = room["question_index"]
 
     if q_index >= len(engine.questions):
@@ -162,34 +167,33 @@ def player_interface(engine):
     st.subheader(f"Question {q_index + 1}")
     st.write(q["question"])
 
-    selected = st.radio("Your answer:", q["options"], key=f"ans_{q_index}")
+    selected = st.radio("Your Answer:", q["options"], key=f"player_ans_{q_index}")
 
     if st.button("Submit Answer"):
-        # Save answer
         room = load_room(code)
         room["players"][name]["answer"] = selected
 
-        # Score if correct
+        # scoring
         if selected == q["answer"]:
             room["players"][name]["score"] += 100
 
         save_room(code, room)
         st.success("Answer submitted!")
 
-    # Auto-refresh
-    time.sleep(1)
-    st.experimental_rerun()
+    # SAFE auto-refresh
+    st.markdown("<meta http-equiv='refresh' content='2'>", unsafe_allow_html=True)
+    return
 
 
 # ---------------------------------------------------------
-# MAIN ENTRY POINT
+# MAIN ENTRY
 # ---------------------------------------------------------
 def live_session_page(engine, ctx):
     st.title("🌐 Live Multiplayer Quiz")
 
-    mode = st.radio("Mode:", ["Host", "Player"], horizontal=True)
+    role = st.radio("Select Mode:", ["Host", "Player"], horizontal=True)
 
-    if mode == "Host":
+    if role == "Host":
         host_interface(engine)
     else:
         player_interface(engine)
