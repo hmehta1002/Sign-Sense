@@ -10,7 +10,6 @@ from frontend.ui import (
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
-from live.live_sync import init_live_session, live_session_page
 from revision.revision_ui import render_revision_page
 
 
