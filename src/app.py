@@ -1,32 +1,59 @@
+"""
+src/app.py
+
+Robust main application router for SignSense.
+This file is defensive: missing modules won't crash the app; instead,
+a helpful placeholder is shown asking you to create the missing file.
+"""
+
 import streamlit as st
+from importlib import import_module
 
-# Import UI functions
-from frontend.ui import (
-    apply_theme,
-    render_mode_picker,
-    render_subject_picker,
-    render_question_UI,
-)
+# ---------- Helper to import modules safely ----------
+def safe_import(module_path: str, attr: str = None):
+    """
+    Try to import `module_path`. If it fails, return a placeholder object.
+    If attr is provided, return that attribute from the module.
+    """
+    try:
+        mod = import_module(module_path)
+        if attr:
+            return getattr(mod, attr)
+        return mod
+    except Exception as e:
+        # Return a placeholder that, when called, will render an informative page
+        def placeholder(*args, **kwargs):
+            st.error(f"Missing module or error importing `{module_path}`.")
+            st.write("Full error (developer):")
+            st.code(str(e))
+            st.write("Fix: create the file/module or check for typos in the path.")
+            return None
+        return placeholder
 
-# Imported pages
-from frontend.dashboard import render_dashboard
-from backend.logic import QuizEngine
-from ai.ai_builder import ai_quiz_builder
-from live.live_sync import init_live_session, live_session_page
-from revision.revision_ui import render_revision_page
+# ---------- Safe imports (placeholders if missing) ----------
+# UI pieces (these are expected to exist)
+apply_theme = safe_import("frontend.ui", "apply_theme")
+render_mode_picker = safe_import("frontend.ui", "render_mode_picker")
+render_subject_picker = safe_import("frontend.ui", "render_subject_picker")
+render_question_UI = safe_import("frontend.ui", "render_question_UI")
 
+# Optional pages (dashboard / revision / live / ai)
+render_dashboard = safe_import("frontend.dashboard", "render_dashboard")
+render_revision_page = safe_import("revision.revision_ui", "render_revision_page")
+init_live_session = safe_import("live.live_sync", "init_live_session")
+live_session_page = safe_import("live.live_sync", "live_session_page")
+ai_quiz_builder = safe_import("ai.ai_builder", "ai_quiz_builder")
 
-# ---------------------------------------------------------
-# RESET APPLICATION
-# ---------------------------------------------------------
+# Core backend (QuizEngine) — show placeholder if missing
+QuizEngine = safe_import("backend.logic", "QuizEngine")
+
+# -------------------- App helpers --------------------
 def reset_app():
+    """Clear session state and rerun."""
     st.session_state.clear()
     st.rerun()
 
 
-# ---------------------------------------------------------
-# SIDEBAR NAVIGATION
-# ---------------------------------------------------------
 def sidebar_navigation():
     pages = {
         "📘 Solo Quiz": "solo",
@@ -35,123 +62,151 @@ def sidebar_navigation():
         "📊 Dashboard": "dashboard",
         "🤖 Admin / AI Quiz Builder": "admin_ai",
     }
-
     selection = st.sidebar.radio("Navigation", list(pages.keys()))
     return pages[selection]
 
 
-# ---------------------------------------------------------
-# ENSURE QUIZ ENGINE EXISTS
-# ---------------------------------------------------------
 def ensure_engine():
+    """Initialize QuizEngine safely if available and if mode+subject known."""
     if "engine" not in st.session_state:
         mode = st.session_state.get("mode")
         subject = st.session_state.get("subject")
-
         if mode and subject:
-            st.session_state.engine = QuizEngine(mode, subject)
+            try:
+                st.session_state.engine = QuizEngine(mode, subject)
+            except Exception as e:
+                st.error("Failed to initialize QuizEngine.")
+                st.write("Error:")
+                st.code(str(e))
+                st.session_state.engine = None
 
 
-# ---------------------------------------------------------
-# SOLO QUIZ LOGIC
-# ---------------------------------------------------------
+# -------------------- Pages --------------------
 def solo_quiz_page():
-    engine: QuizEngine = st.session_state.engine
+    engine = st.session_state.get("engine")
+    if not engine:
+        st.error("Quiz engine not initialized.")
+        if st.button("Initialize engine"):
+            ensure_engine()
+            st.rerun()
+        return
+
     question = engine.get_current_question()
 
-    # Quiz completed
+    # Completed
     if question is None:
         st.success("🎉 Quiz Complete!")
-        st.balloons()
+        try:
+            st.balloons()
+        except Exception:
+            pass
 
         if st.button("📊 View Dashboard"):
             st.session_state.page = "dashboard"
             st.rerun()
-
         return
 
-    # Render question UI
+    # Render the question (render_question_UI expected to return selected)
     selected = render_question_UI(question)
 
-    # Navigation buttons
+    # Navigation
     col1, col2 = st.columns(2)
 
-    # Back button
     with col1:
         if engine.current_index > 0:
             if st.button("⬅ Back"):
                 engine.current_index -= 1
                 st.rerun()
 
-    # Next button
     with col2:
         if st.button("Next ➜"):
+            # If check_answer exists on engine, call it before moving on
+            try:
+                # if user selected an option, record it
+                if selected is not None and hasattr(engine, "check_answer"):
+                    engine.check_answer(selected)
+            except Exception:
+                # ignore engine check errors — keep moving
+                pass
             engine.next_question()
             st.rerun()
 
 
-# ---------------------------------------------------------
-# PAGE ROUTER
-# ---------------------------------------------------------
-def route_page(page_name):
-    if page_name == "solo":
+def dashboard_page():
+    engine = st.session_state.get("engine")
+    render_dashboard(engine)
 
-        # Step 1 — Mode not chosen yet
+
+def revision_page():
+    engine = st.session_state.get("engine")
+    render_revision_page(engine)
+
+
+def live_page():
+    # init_live_session and live_session_page are placeholders if module missing
+    try:
+        init_live_session()
+    except Exception:
+        pass
+    live_session_page(st.session_state.get("engine"), {})
+
+
+def admin_ai_page():
+    ai_quiz_builder()
+
+
+# -------------------- Router --------------------
+def route_page(page_name: str):
+    if page_name == "solo":
         if "mode" not in st.session_state:
             render_mode_picker()
             return
 
-        # Step 2 — Subject not chosen yet
         if "subject" not in st.session_state:
             render_subject_picker()
             return
 
-        # Step 3 — Engine setup
         ensure_engine()
-
-        # Step 4 — Run the quiz
         solo_quiz_page()
 
     elif page_name == "dashboard":
-        render_dashboard(st.session_state.get("engine"))
+        dashboard_page()
 
     elif page_name == "revision":
-        render_revision_page(st.session_state.get("engine"))
+        revision_page()
 
     elif page_name == "live":
-        init_live_session()
-        live_session_page(st.session_state.get("engine"), {})
+        live_page()
 
     elif page_name == "admin_ai":
-        ai_quiz_builder()
+        admin_ai_page()
 
     else:
         st.error("⚠ Unknown page requested.")
 
 
-# ---------------------------------------------------------
-# MAIN APPLICATION
-# ---------------------------------------------------------
+# -------------------- Main --------------------
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
 
-    # Theme
-    apply_theme()
+    # Apply theme (if available)
+    try:
+        apply_theme()
+    except Exception:
+        # apply_theme might be a placeholder; ignore errors
+        pass
 
-    # Reset button
+    # Sidebar reset
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
 
-    # Navigation
+    # Navigation selection
     current_page = sidebar_navigation()
     st.session_state.page = current_page
 
-    # Routing
+    # Route
     route_page(current_page)
 
 
-# ---------------------------------------------------------
-# ENTRY POINT
-# ---------------------------------------------------------
 if __name__ == "__main__":
     main()
