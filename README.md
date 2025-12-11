@@ -57,10 +57,6 @@ pip install -r requirements.txt
 Run the application
 streamlit run streamlit_app.py
 
-Access the app
-http://localhost:8501
-
-
 🏗️ 3. Architecture Overview
 SignSense follows a modular, layered architecture:
 Frontend Layer (Streamlit)
