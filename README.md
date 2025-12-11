@@ -222,3 +222,18 @@ Modeled Live Session prototype
 Created question datasets (Math + English)
 
 Implemented UI/UX themes and animations
+
+Shreya
+
+Frontend Development
+
+Dattavi
+
+Frontend Development
+
+Ashrit
+
+Backend development
+
+
+
