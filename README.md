@@ -46,7 +46,7 @@ Basic leaderboard logic
 This prototype achieves the intended 60–80% functional completion expected for Round 2.
 
 
-⚙️ 2. Setup Instructions
+2. Setup Instructions
 Clone the repository
 git clone <your-repo-url>
 cd sign-sense
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 Run the application
 streamlit run streamlit_app.py
 
-🏗️ 3. Architecture Overview
+3. Architecture Overview
 SignSense follows a modular, layered architecture:
 Frontend Layer (Streamlit)
 Renders quiz UI, dashboards, revision pages
@@ -71,7 +71,7 @@ Manages progression, scoring, timing, streaks
 Logs user responses for analytics
 Supports adaptive difficulty foundations
 
-🔌 4. How to Run Locally (Step-By-Step)
+4. How to Run Locally (Step-By-Step)
 
 1️⃣ Create a virtual environment (recommended)
 
@@ -108,7 +108,7 @@ streamlit run streamlit_app.py
 
 http://localhost:8501
 
-🔗 5. APIs & Endpoints (Prototype Level)
+5. APIs & Endpoints (Prototype Level)
 
 Even though Streamlit abstracts backend routes, your architecture includes API-like callable modules.
 
@@ -120,7 +120,7 @@ get_current_question()	Returns active question object
 check_answer(user_answer)	Evaluates correctness + scoring
 next_question()	Moves to next question
 
-🔗 5. APIs & Endpoints (Prototype Level)
+5. APIs & Endpoints (Prototype Level)
 
 Although Streamlit does not use HTTP routes directly, SignSense exposes modular backend endpoints through Python modules that behave like API calls.
 
@@ -151,7 +151,7 @@ Function	Purpose
 get_incorrect_questions()	Returns all incorrectly answered MCQs
 render_revision_page(engine)	UI to practice weak topics
 
-📝 6. Example Inputs & Outputs
+6. Example Inputs & Outputs
 Example Question (JSON Input)
 {
   "id": "ENG_Q1",
@@ -202,7 +202,7 @@ uuid
 transformers
 sentencepiece
 
-👥 8. Contributors
+8. Contributors
 Project Lead & Developer
 
 Himani Mehta-
