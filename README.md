@@ -209,7 +209,7 @@ sentencepiece
 👥 8. Contributors
 Project Lead & Developer
 
-Himani Mehta
+Himani Mehta-
 
 Full-stack development (frontend + backend + AI integration)
 
@@ -223,15 +223,15 @@ Created question datasets (Math + English)
 
 Implemented UI/UX themes and animations
 
-Shreya
+Shreya Sareen-
 
 Frontend Development
 
-Dattavi
+Dattavi Solanki-
 
 Frontend Development
 
-Ashrit
+Ashrit-
 
 Backend development
 
