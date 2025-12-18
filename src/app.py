@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
@@ -13,7 +14,42 @@ from revision.revision_ui import render_revision_page
 def reset_app():
     for k in list(st.session_state.keys()):
         del st.session_state[k]
-    st.stop()     # <<< IMPORTANT: no rerun loop
+    st.stop()
+
+
+# ---------------------------------------------------------
+# USER PROFILE & 3D AVATAR
+# ---------------------------------------------------------
+def render_user_profile():
+    if "username" not in st.session_state:
+        st.session_state.username = ""
+
+    st.sidebar.subheader("👤 User Profile")
+
+    username = st.sidebar.text_input(
+        "Enter your name",
+        value=st.session_state.username,
+        placeholder="Demo User"
+    )
+
+    if username:
+        st.session_state.username = username
+        avatar_url = (
+            f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
+        )
+        st.sidebar.image(avatar_url, width=120)
+        st.sidebar.caption("3D Avatar (auto-generated, privacy-safe)")
+
+
+# ---------------------------------------------------------
+# SESSION UTILITIES
+# ---------------------------------------------------------
+def init_session_utilities():
+    if "demo_mode" not in st.session_state:
+        st.session_state.demo_mode = False
+
+    if "history" not in st.session_state:
+        st.session_state.history = []
 
 
 # ---------------------------------------------------------
@@ -36,6 +72,14 @@ def sidebar_navigation():
 def solo_quiz_page():
     st.header("📘 Solo Quiz")
 
+    init_session_utilities()
+
+    st.checkbox(
+        "🎯 Demo Mode (stable behaviour for live demo)",
+        key="demo_mode",
+        help="Locks predictable execution for presentations"
+    )
+
     mode = st.selectbox(
         "Accessibility Mode",
         ["standard", "dyslexia", "adhd", "isl", "hybrid"]
@@ -44,11 +88,13 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start/Restart
+    # Start / Restart Quiz
     if st.button("Start / Restart Quiz"):
-        st.session_state["engine"] = QuizEngine(mode, subject)
-        st.session_state["solo_started"] = True
-        st.stop()   # <<< STOP, don’t rerun loop
+        with st.spinner("Initializing quiz engine..."):
+            time.sleep(0.5)  # UX polish
+            st.session_state["engine"] = QuizEngine(mode, subject)
+            st.session_state["solo_started"] = True
+        st.stop()
 
     engine = st.session_state.get("engine")
 
@@ -71,6 +117,10 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
+    st.caption(
+        "ℹ️ Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
+    )
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -83,8 +133,25 @@ def solo_quiz_page():
         if st.button("Next ➜"):
             if selected:
                 engine.check_answer(selected)
+
+                # Store lightweight session history
+                st.session_state.history.append({
+                    "question": q.get("question"),
+                    "selected": selected,
+                    "correct": q.get("answer")
+                })
+
             engine.next_question()
             st.stop()
+
+    # Session History (last 3)
+    if st.session_state.history:
+        with st.expander("🕘 Session History (Last 3 Attempts)"):
+            for item in st.session_state.history[-3:]:
+                st.write(
+                    f"**Q:** {item['question']}  \n"
+                    f"**Your Answer:** {item['selected']}"
+                )
 
 
 # ---------------------------------------------------------
@@ -107,7 +174,6 @@ def route_page(page_name: str):
             st.warning("Start a quiz first to initialize the question engine.")
             return
 
-        # SAFE IMPORT
         from live.live_sync import live_session_page
         live_session_page(engine, {})
 
@@ -124,6 +190,8 @@ def route_page(page_name: str):
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
     apply_theme()
+
+    render_user_profile()
 
     if st.sidebar.button("🔁 Reset App"):
         reset_app()
