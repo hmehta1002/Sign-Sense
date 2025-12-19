@@ -26,7 +26,6 @@ def render_user_profile():
         st.session_state.username = ""
 
     st.sidebar.subheader("User Profile")
-
     username = st.sidebar.text_input(
         "Enter your name",
         value=st.session_state.username,
@@ -39,18 +38,7 @@ def render_user_profile():
 
 
 # ---------------------------------------------------------
-# SESSION UTILITIES
-# ---------------------------------------------------------
-def init_session_utilities():
-    if "demo_mode" not in st.session_state:
-        st.session_state.demo_mode = False
-
-    if "history" not in st.session_state:
-        st.session_state.history = []
-
-
-# ---------------------------------------------------------
-# INLINE ISL DEMO AVATAR (ALWAYS RENDERS)
+# INLINE DEMO AVATAR (ALWAYS RENDERS)
 # ---------------------------------------------------------
 def render_isl_demo_avatar():
     st.markdown(
@@ -65,8 +53,7 @@ def render_isl_demo_avatar():
           <text x="55" y="128"
                 font-size="10"
                 fill="#cbd5e1"
-                text-anchor="middle"
-                font-family="Arial, sans-serif">
+                text-anchor="middle">
             ISL Demo Avatar
           </text>
         </svg>
@@ -76,75 +63,61 @@ def render_isl_demo_avatar():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES
-# ---------------------------------------------------------
-def render_isl_number_signs(question_text: str):
-    numbers = re.findall(r"\b\d+\b", question_text)
-    numbers = list(dict.fromkeys(numbers))[:3]
-
-    if not numbers:
-        return
-
-    st.markdown("### ISL Number Focus")
-
-    cols = st.columns(len(numbers))
-    for col, num in zip(cols, numbers):
-        with col:
-            st.markdown(
-                f"""
-                <div style="
-                    border:1px solid #334155;
-                    border-radius:10px;
-                    padding:14px;
-                    text-align:center;
-                    background:#020617;
-                ">
-                    <div style="font-size:28px;font-weight:600;">{num}</div>
-                    <div style="font-size:12px;color:#94a3b8;">
-                        Visual number cue
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-# ---------------------------------------------------------
-# SIGN-FIRST REASONING GRAPH (ISL + ADHD)
+# QUESTION-SPECIFIC REASONING FLOW (ISL + ADHD)
 # ---------------------------------------------------------
 def render_reasoning_graph(question_text: str):
-    st.markdown("### Reasoning Flow (Visual)")
+    numbers = re.findall(r"\b\d+\b", question_text)
+    ops = []
 
-    steps = [
-        ("Numbers", "Identify all numbers"),
-        ("Operation", "Understand the operation"),
-        ("Rule", "Apply the correct rule"),
-        ("Answer", "Choose final result"),
-    ]
+    if "÷" in question_text or "/" in question_text:
+        ops.append("Division")
+    if "×" in question_text or "*" in question_text:
+        ops.append("Multiplication")
+    if "+" in question_text:
+        ops.append("Addition")
+    if "-" in question_text:
+        ops.append("Subtraction")
 
-    cols = st.columns(len(steps))
+    rule = "Left-to-right evaluation"
+    if ("+" in question_text or "-" in question_text) and \
+       ("×" in question_text or "÷" in question_text):
+        rule = "BODMAS / Operator precedence"
 
-    for col, (title, desc) in zip(cols, steps):
-        with col:
-            st.markdown(
-                f"""
-                <div style="
-                    border:1px solid #334155;
-                    border-radius:12px;
-                    padding:16px;
-                    text-align:center;
-                    background:#020617;
-                ">
-                    <div style="font-size:14px;font-weight:600;">
-                        {title}
-                    </div>
-                    <div style="font-size:12px;color:#94a3b8;margin-top:6px;">
-                        {desc}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    st.markdown("### Reasoning Flow (Question-Specific)")
+
+    cols = st.columns(4)
+
+    with cols[0]:
+        st.markdown(f"""
+        <div style="border:1px solid #334155;border-radius:12px;
+        padding:14px;text-align:center;background:#020617;">
+        <b>Numbers</b><br>{', '.join(numbers)}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with cols[1]:
+        st.markdown(f"""
+        <div style="border:1px solid #334155;border-radius:12px;
+        padding:14px;text-align:center;background:#020617;">
+        <b>Operations</b><br>{' → '.join(ops)}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with cols[2]:
+        st.markdown(f"""
+        <div style="border:1px solid #334155;border-radius:12px;
+        padding:14px;text-align:center;background:#020617;">
+        <b>Rule Applied</b><br>{rule}
+        </div>
+        """, unsafe_allow_html=True)
+
+    with cols[3]:
+        st.markdown(f"""
+        <div style="border:1px solid #334155;border-radius:12px;
+        padding:14px;text-align:center;background:#020617;">
+        <b>Outcome</b><br>Final Answer
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------
@@ -154,28 +127,22 @@ def render_isl_explanation(question_data):
     st.success("ISL Accessibility Mode Active")
 
     st.markdown("### ISL Visual Explanation Panel")
-    st.caption(
-        "Visual, non-audio guidance designed for Indian Sign Language learners."
-    )
+    st.caption("Visual, non-audio guidance for Indian Sign Language learners.")
 
     col1, col2 = st.columns([2, 6])
-
     with col1:
         render_isl_demo_avatar()
 
     with col2:
-        if question_data and "question" in question_data:
-            st.markdown(f"**Question Focus:** {question_data['question']}")
-
+        st.markdown(f"**Question Focus:** {question_data['question']}")
         steps = [
-            "Identify the numbers and mathematical terms.",
-            "Understand what operation is required.",
-            "Apply the relevant rule or simplification.",
-            "Select the correct equivalent expression."
+            "Identify the numbers and operators.",
+            "Follow the correct operation order.",
+            "Apply the mathematical rule.",
+            "Select the correct answer."
         ]
-
-        for step in steps:
-            st.write(f"- {step}")
+        for s in steps:
+            st.write(f"- {s}")
 
 
 # ---------------------------------------------------------
@@ -198,8 +165,6 @@ def sidebar_navigation():
 def solo_quiz_page():
     st.header("Solo Quiz")
 
-    init_session_utilities()
-
     mode = st.selectbox(
         "Accessibility Mode",
         ["standard", "dyslexia", "adhd", "isl", "hybrid"]
@@ -209,83 +174,34 @@ def solo_quiz_page():
     subject = subject_label.lower()
 
     if st.button("Start / Restart Quiz"):
-        with st.spinner("Initializing quiz engine..."):
-            time.sleep(0.3)
-            st.session_state["engine"] = QuizEngine(mode, subject)
+        st.session_state["engine"] = QuizEngine(mode, subject)
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
-
     if not engine:
         st.info("Click Start / Restart Quiz to begin.")
         return
 
-    engine.mode = mode
-    engine.subject = subject
-
     q = engine.get_current_question()
-
     if q is None:
         st.success("Quiz complete.")
-        if st.button("View Dashboard"):
-            st.session_state["page"] = "dashboard"
-            st.experimental_rerun()
         return
 
     selected = render_question_UI(q, mode)
 
-    # ---------- ADHD + ISL ADDITIONS ----------
     if mode in ["isl", "adhd"]:
-        render_reasoning_graph(q.get("question", ""))
+        render_reasoning_graph(q["question"])
 
     if mode == "isl":
-        render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
-    # -----------------------------------------
-
-    st.caption(
-        "Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
-    )
 
     col1, col2 = st.columns(2)
-
-    with col1:
-        if engine.current_index > 0:
-            if st.button("Back"):
-                engine.current_index -= 1
-                st.experimental_rerun()
-
     with col2:
         if st.button("Next"):
             if selected:
                 engine.check_answer(selected)
-                st.session_state.history.append({
-                    "question": q.get("question"),
-                    "selected": selected
-                })
             engine.next_question()
             st.experimental_rerun()
-
-
-# ---------------------------------------------------------
-# ROUTER
-# ---------------------------------------------------------
-def route_page(page_name: str):
-    if page_name == "solo":
-        solo_quiz_page()
-    elif page_name == "dashboard":
-        render_dashboard(st.session_state.get("engine"))
-    elif page_name == "revision":
-        render_revision_page(st.session_state.get("engine"))
-    elif page_name == "live":
-        engine = st.session_state.get("engine")
-        if not engine:
-            st.warning("Start a quiz first.")
-            return
-        from live.live_sync import live_session_page
-        live_session_page(engine, {})
-    elif page_name == "admin_ai":
-        ai_quiz_builder()
 
 
 # ---------------------------------------------------------
@@ -294,15 +210,10 @@ def route_page(page_name: str):
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
     apply_theme()
-
     render_user_profile()
-
-    if st.sidebar.button("Reset App"):
-        reset_app()
-
     page = sidebar_navigation()
-    st.session_state["page"] = page
-    route_page(page)
+    if page == "solo":
+        solo_quiz_page()
 
 
 if __name__ == "__main__":
