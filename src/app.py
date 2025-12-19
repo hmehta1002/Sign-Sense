@@ -19,7 +19,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE
+# USER PROFILE (INITIALS AVATAR)
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
@@ -35,7 +35,30 @@ def render_user_profile():
 
     if username:
         st.session_state.username = username
-        st.sidebar.caption("Accessibility features enabled")
+        initials = username.strip()[0].upper()
+
+        st.sidebar.markdown(
+            f"""
+            <div style="
+                width:60px;
+                height:60px;
+                border-radius:50%;
+                background:#1e293b;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#e5e7eb;
+                font-size:24px;
+                font-weight:600;
+                margin-bottom:8px;
+            ">
+                {initials}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.sidebar.caption("Accessibility profile active")
 
 
 # ---------------------------------------------------------
@@ -50,7 +73,7 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES (GUARANTEED RENDER)
+# ISL NUMBER VISUAL CUES (GUARANTEED)
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
@@ -67,15 +90,15 @@ def render_isl_number_signs(question_text: str):
             st.markdown(
                 f"""
                 <div style="
-                    border: 1px solid #334155;
-                    border-radius: 10px;
-                    padding: 14px;
-                    text-align: center;
-                    background-color: #020617;
+                    border:1px solid #334155;
+                    border-radius:10px;
+                    padding:14px;
+                    text-align:center;
+                    background:#020617;
                 ">
-                    <div style="font-size: 28px; font-weight: 600;">{num}</div>
-                    <div style="font-size: 12px; color: #94a3b8;">
-                        Visual number cue for ISL learners
+                    <div style="font-size:28px;font-weight:600;">{num}</div>
+                    <div style="font-size:12px;color:#94a3b8;">
+                        Visual number cue
                     </div>
                 </div>
                 """,
@@ -84,7 +107,37 @@ def render_isl_number_signs(question_text: str):
 
 
 # ---------------------------------------------------------
-# ISL EXPLANATION PANEL (PROFESSIONAL)
+# ISL AVATAR (NEUTRAL, PROFESSIONAL)
+# ---------------------------------------------------------
+def render_isl_avatar():
+    st.markdown(
+        """
+        <div style="
+            width:70px;
+            height:70px;
+            border-radius:50%;
+            background:#0f172a;
+            border:2px solid #334155;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:14px;
+            color:#e5e7eb;
+            font-weight:600;
+            margin-bottom:6px;
+        ">
+            ISL
+        </div>
+        <div style="font-size:12px;color:#94a3b8;">
+            ISL Guide
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ---------------------------------------------------------
+# ISL EXPLANATION PANEL (WITH AVATAR)
 # ---------------------------------------------------------
 def render_isl_explanation(question_data):
     st.success("ISL Accessibility Mode Active")
@@ -94,20 +147,26 @@ def render_isl_explanation(question_data):
         "Visual, non-audio guidance designed for Indian Sign Language learners."
     )
 
-    if question_data and "question" in question_data:
-        st.markdown(
-            f"**Question Focus:** {question_data['question']}"
-        )
+    col1, col2 = st.columns([1, 6])
 
-    steps = [
-        "Identify the numbers and mathematical terms.",
-        "Understand what operation or comparison is required.",
-        "Apply the relevant rule or simplification.",
-        "Select the correct equivalent expression."
-    ]
+    with col1:
+        render_isl_avatar()
 
-    for step in steps:
-        st.write(f"- {step}")
+    with col2:
+        if question_data and "question" in question_data:
+            st.markdown(
+                f"**Question Focus:** {question_data['question']}"
+            )
+
+        steps = [
+            "Identify the numbers and mathematical terms.",
+            "Understand what operation or comparison is required.",
+            "Apply the relevant rule or simplification.",
+            "Select the correct equivalent expression."
+        ]
+
+        for step in steps:
+            st.write(f"- {step}")
 
 
 # ---------------------------------------------------------
@@ -145,7 +204,6 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start / Restart Quiz
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
@@ -172,7 +230,6 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
-    # ISL MODE SUPPORT
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
