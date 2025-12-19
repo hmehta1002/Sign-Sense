@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-import openai
+from openai import OpenAI
 
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
@@ -17,16 +17,16 @@ from backend.cloud_store import (
 )
 
 # ---------------------------------------------------------
-# OPENAI SETUP
+# OPENAI CLIENT (NEW SDK – FIXED)
 # ---------------------------------------------------------
-openai.api_key = os.getenv("OPENAI_API_KEY")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_KEY) if OPENAI_KEY else None
 
 # ---------------------------------------------------------
 # RESET APP
 # ---------------------------------------------------------
 def reset_app():
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
+    st.session_state.clear()
     st.experimental_rerun()
 
 # ---------------------------------------------------------
@@ -51,13 +51,13 @@ def sidebar_navigation():
     return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
 # ---------------------------------------------------------
-# AI LEARNING ASSISTANT
+# AI LEARNING ASSISTANT (FIXED)
 # ---------------------------------------------------------
 def render_ai_learning_assistant(question_text: str, mode: str):
     st.subheader("🤖 AI Learning Assistant")
 
-    if not openai.api_key:
-        st.info("AI assistant unavailable.")
+    if client is None:
+        st.info("AI assistant unavailable (API key missing).")
         return
 
     if "chat_history" not in st.session_state:
@@ -75,26 +75,28 @@ def render_ai_learning_assistant(question_text: str, mode: str):
         )
 
         system_prompt = f"""
-You are a learning assistant inside an educational quiz app.
+You are an AI learning assistant inside an educational quiz app.
 
 STRICT RULES:
 - Never give the final answer.
-- Never choose an option.
+- Never select an option.
 - Explain concepts only.
-- Be concise and clear.
+- Keep explanations short and clear.
 
-Adapt to accessibility mode:
-- ISL: step-by-step, visual wording
-- Dyslexia: short, structured sentences
-- ADHD: bullet points, minimal text
+Accessibility mode: {mode}
+
+Guidelines:
+- ISL → step-by-step, visual wording
+- Dyslexia → short sentences, structured
+- ADHD → bullet points, concise
 
 Question:
 {question_text}
 """
 
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input},
@@ -102,8 +104,9 @@ Question:
                 temperature=0.3,
             )
             reply = response.choices[0].message.content
-        except Exception:
-            reply = "I’m having trouble right now. Please try again."
+
+        except Exception as e:
+            reply = "AI is temporarily unavailable. Please try again shortly."
 
         st.session_state.chat_history.append(
             {"role": "assistant", "content": reply}
@@ -123,24 +126,20 @@ def teacher_classroom():
         st.success(f"Classroom Code: {st.session_state['class_code']}")
 
         st.subheader("Upload Question")
-        q = st.text_input("Enter question for students")
+        q = st.text_input("Question for students")
         if st.button("Add Question") and q:
             add_classroom_question(st.session_state["class_code"], q)
             st.success("Question added")
 
         classroom = get_classroom_state(st.session_state["class_code"])
 
-        st.subheader("Student Progress")
+        st.subheader("Students")
         students = classroom.get("students", {})
         if not students:
-            st.info("No students joined yet")
+            st.info("No students joined yet.")
         else:
             for name, data in students.items():
-                st.write(f"• {name}: {data.get('status', '—')}")
-
-        st.subheader("Questions")
-        for i, q in enumerate(classroom.get("questions", [])):
-            st.write(f"Q{i+1}: {q}")
+                st.write(f"• {name} — {data.get('status', 'joined')}")
 
 # ---------------------------------------------------------
 # STUDENT CLASSROOM
@@ -151,7 +150,7 @@ def student_classroom():
     name = st.text_input("Your Name")
     code = st.text_input("Classroom Code")
 
-    if st.button("Join Classroom"):
+    if st.button("Join"):
         if join_classroom(code, name):
             st.session_state["student_name"] = name
             st.session_state["joined_code"] = code
@@ -163,18 +162,18 @@ def student_classroom():
         classroom = get_classroom_state(st.session_state["joined_code"])
         questions = classroom.get("questions", [])
 
-        st.subheader("Classroom Questions")
+        st.subheader("Class Questions")
         for i, q in enumerate(questions):
             st.markdown(f"**Q{i+1}: {q}**")
             ans = st.text_input("Your answer", key=f"ans_{i}")
-            if st.button("Submit Answer", key=f"submit_{i}"):
+            if st.button("Submit", key=f"submit_{i}"):
                 submit_classroom_answer(
                     st.session_state["joined_code"],
                     st.session_state["student_name"],
                     i,
                     ans,
                 )
-                st.success("Answer submitted")
+                st.success("Submitted")
 
 # ---------------------------------------------------------
 # SOLO QUIZ
@@ -184,14 +183,14 @@ def solo_quiz_page():
 
     mode = st.selectbox(
         "Accessibility Mode",
-        ["standard", "dyslexia", "adhd", "isl"]
+        ["standard", "isl", "adhd", "dyslexia"]
     )
 
-    subject_label = st.selectbox("Subject", ["Math", "English"])
-    subject = subject_label.lower()
+    subject = st.selectbox("Subject", ["Math", "English"]).lower()
 
     if st.button("Start / Restart Quiz"):
         st.session_state["engine"] = QuizEngine(mode, subject)
+        st.session_state.pop("chat_history", None)
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -201,7 +200,7 @@ def solo_quiz_page():
 
     q = engine.get_current_question()
     if q is None:
-        st.success("Quiz complete.")
+        st.success("Quiz completed 🎉")
         return
 
     selected = render_question_UI(q, mode)
