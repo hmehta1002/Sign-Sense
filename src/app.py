@@ -89,16 +89,24 @@ def render_ai_learning_assistant(question_text: str, mode: str):
 # ---------------------------------------------------------
 # TEACHER CLASSROOM
 # ---------------------------------------------------------
-def teacher_classroom():
-    st.header("Insight Classroom")
 
+
+# ---------------------------------------------------------
+# STUDENT CLASSROOM
+# ---------------------------------------------------------
+def student_classroom():def teacher_classroom():
+    st.header("🧑‍🏫 Insight Classroom")
+
+    # -----------------------------
+    # CLASSROOM CREATION
+    # -----------------------------
     if "class_code" not in st.session_state:
         if st.button("Create Classroom"):
             st.session_state["class_code"] = create_classroom()
     else:
         st.success(f"Classroom Code: {st.session_state['class_code']}")
 
-        st.subheader("Upload Question")
+        st.subheader("📤 Upload Question")
         q = st.text_input("Question for students")
         if st.button("Add Question") and q:
             add_classroom_question(st.session_state["class_code"], q)
@@ -107,17 +115,72 @@ def teacher_classroom():
         classroom = get_classroom_state(st.session_state["class_code"])
         students = classroom.get("students", {})
 
-        st.subheader("Student Progress")
+        st.subheader("👥 Student Progress")
         if not students:
             st.info("No students joined yet.")
         else:
             for name, data in students.items():
                 st.write(f"• {name} — {data.get('status', 'Joined')}")
 
-# ---------------------------------------------------------
-# STUDENT CLASSROOM
-# ---------------------------------------------------------
-def student_classroom():
+    # -----------------------------
+    # COGNITIVE REPLAY (TEACHER)
+    # -----------------------------
+    st.divider()
+    st.subheader("🧠 Cognitive Replay")
+
+    # Explanation (important for judges)
+    st.caption(
+        "Cognitive Replay reconstructs how students reasoned during quiz attempts "
+        "using interaction patterns like time spent and option changes."
+    )
+
+    # Ensure cognitive log exists
+    if "cognitive_log" not in st.session_state:
+        st.session_state.cognitive_log = {}
+
+    log = st.session_state.cognitive_log
+
+    # If no data yet
+    if not log:
+        st.warning(
+            "No cognitive data yet. "
+            "Ask a student to attempt at least one quiz question to generate insights."
+        )
+        return
+
+    # Student selection
+    student = st.selectbox(
+        "Select Student",
+        list(log.keys())
+    )
+
+    questions = list(log[student].keys())
+    question = st.selectbox(
+        "Select Question",
+        questions
+    )
+
+    record = log[student][question][-1]
+
+    # Display replay metrics
+    st.markdown(f"""
+**Question:** {question}
+
+• **Mode:** {record['mode']}  
+• **Time Spent:** {record['time_spent']} seconds  
+• **Option Changes:** {record['option_changes']}  
+• **Hesitation Detected:** {record['hesitation']}
+""")
+
+    # Auto insight
+    insight = "Student showed stable reasoning."
+    if record["option_changes"] > 1:
+        insight = "Student re-evaluated multiple options before answering."
+    if record["hesitation"] == "Yes":
+        insight += " A long pause suggests conceptual uncertainty."
+
+    st.info(f"🧩 Replay Insight: {insight}")
+
     st.header("Join Classroom")
 
     name = st.text_input("Your Name")
