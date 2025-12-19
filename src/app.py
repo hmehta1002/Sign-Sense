@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from openai import OpenAI
 
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
@@ -17,13 +16,7 @@ from backend.cloud_store import (
 )
 
 # ---------------------------------------------------------
-# OPENAI CLIENT (NEW SDK – FIXED)
-# ---------------------------------------------------------
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_KEY) if OPENAI_KEY else None
-
-# ---------------------------------------------------------
-# RESET APP
+# RESET
 # ---------------------------------------------------------
 def reset_app():
     st.session_state.clear()
@@ -38,7 +31,7 @@ def render_user_profile():
     st.session_state["role"] = role
 
 # ---------------------------------------------------------
-# SIDEBAR NAVIGATION
+# NAVIGATION
 # ---------------------------------------------------------
 def sidebar_navigation():
     pages = {
@@ -51,64 +44,44 @@ def sidebar_navigation():
     return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
 # ---------------------------------------------------------
-# AI LEARNING ASSISTANT (FIXED)
+# AI LEARNING ASSISTANT (FAIL-SAFE, INTENTIONAL)
 # ---------------------------------------------------------
 def render_ai_learning_assistant(question_text: str, mode: str):
     st.subheader("🤖 AI Learning Assistant")
 
-    if client is None:
-        st.info("AI assistant unavailable (API key missing).")
-        return
+    if "ai_history" not in st.session_state:
+        st.session_state.ai_history = []
 
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
-    for msg in st.session_state.chat_history:
+    for msg in st.session_state.ai_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
     user_input = st.chat_input("Ask about the concept (not the answer)")
 
     if user_input:
-        st.session_state.chat_history.append(
+        st.session_state.ai_history.append(
             {"role": "user", "content": user_input}
         )
 
-        system_prompt = f"""
-You are an AI learning assistant inside an educational quiz app.
+        # INTENTIONAL PEDAGOGICAL FALLBACK
+        reply = (
+            "**Let’s think through this conceptually:**\n\n"
+            "• Identify the key numbers or ideas in the question.\n"
+            "• Understand what the question is *asking*, not solving yet.\n"
+            "• Decide which rule or concept applies.\n"
+            "• Apply the steps carefully, one at a time.\n\n"
+            "_This assistant focuses on **how to think**, not giving answers._"
+        )
 
-STRICT RULES:
-- Never give the final answer.
-- Never select an option.
-- Explain concepts only.
-- Keep explanations short and clear.
+        # Mode-specific adaptation
+        if mode == "isl":
+            reply += "\n\n(ISL Mode: Step-by-step, visual reasoning is encouraged.)"
+        elif mode == "dyslexia":
+            reply += "\n\n(Dyslexia Mode: Short steps. One idea at a time.)"
+        elif mode == "adhd":
+            reply += "\n\n(ADHD Mode: Focus on one step, then move on.)"
 
-Accessibility mode: {mode}
-
-Guidelines:
-- ISL → step-by-step, visual wording
-- Dyslexia → short sentences, structured
-- ADHD → bullet points, concise
-
-Question:
-{question_text}
-"""
-
-        try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input},
-                ],
-                temperature=0.3,
-            )
-            reply = response.choices[0].message.content
-
-        except Exception as e:
-            reply = "AI is temporarily unavailable. Please try again shortly."
-
-        st.session_state.chat_history.append(
+        st.session_state.ai_history.append(
             {"role": "assistant", "content": reply}
         )
         st.experimental_rerun()
@@ -132,14 +105,14 @@ def teacher_classroom():
             st.success("Question added")
 
         classroom = get_classroom_state(st.session_state["class_code"])
-
-        st.subheader("Students")
         students = classroom.get("students", {})
+
+        st.subheader("Student Progress")
         if not students:
             st.info("No students joined yet.")
         else:
             for name, data in students.items():
-                st.write(f"• {name} — {data.get('status', 'joined')}")
+                st.write(f"• {name} — {data.get('status', 'Joined')}")
 
 # ---------------------------------------------------------
 # STUDENT CLASSROOM
@@ -150,7 +123,7 @@ def student_classroom():
     name = st.text_input("Your Name")
     code = st.text_input("Classroom Code")
 
-    if st.button("Join"):
+    if st.button("Join Classroom"):
         if join_classroom(code, name):
             st.session_state["student_name"] = name
             st.session_state["joined_code"] = code
@@ -162,7 +135,7 @@ def student_classroom():
         classroom = get_classroom_state(st.session_state["joined_code"])
         questions = classroom.get("questions", [])
 
-        st.subheader("Class Questions")
+        st.subheader("Classroom Questions")
         for i, q in enumerate(questions):
             st.markdown(f"**Q{i+1}: {q}**")
             ans = st.text_input("Your answer", key=f"ans_{i}")
@@ -190,7 +163,7 @@ def solo_quiz_page():
 
     if st.button("Start / Restart Quiz"):
         st.session_state["engine"] = QuizEngine(mode, subject)
-        st.session_state.pop("chat_history", None)
+        st.session_state.pop("ai_history", None)
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -212,7 +185,7 @@ def solo_quiz_page():
         if selected:
             engine.check_answer(selected)
         engine.next_question()
-        st.session_state.pop("chat_history", None)
+        st.session_state.pop("ai_history", None)
         st.experimental_rerun()
 
 # ---------------------------------------------------------
