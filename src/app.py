@@ -73,38 +73,66 @@ def render_dyslexic_decomposition(question_text):
 # QUESTION-SPECIFIC REASONING FLOW (ISL + ADHD)
 # ---------------------------------------------------------
 def render_reasoning_flow(question_text):
-    # Extract numbers and operators in order
-    numbers = re.findall(r"\b\d+\b", question_text)
-    operators = re.findall(r"[+\-×÷*/]", question_text)
+    text = question_text.lower()
 
-    # Normalize operators
-    op_map = {
-        "+": "Addition",
-        "-": "Subtraction",
-        "×": "Multiplication",
-        "*": "Multiplication",
+    # 1. Extract numbers in order
+    numbers = re.findall(r"\b\d+\b", text)
+
+    # 2. Detect operations in order of appearance
+    operations = []
+
+    word_ops = [
+        ("divided by", "Division"),
+        ("divide", "Division"),
+        ("division", "Division"),
+        ("multiplied by", "Multiplication"),
+        ("multiply", "Multiplication"),
+        ("multiplication", "Multiplication"),
+        ("added to", "Addition"),
+        ("add", "Addition"),
+        ("addition", "Addition"),
+        ("subtracted from", "Subtraction"),
+        ("subtract", "Subtraction"),
+        ("subtraction", "Subtraction"),
+    ]
+
+    symbol_ops = {
         "÷": "Division",
         "/": "Division",
+        "×": "Multiplication",
+        "*": "Multiplication",
+        "+": "Addition",
+        "-": "Subtraction",
     }
 
-    op_names = [op_map.get(op, op) for op in operators]
+    # Find word-based operations in text order
+    for phrase, op_name in word_ops:
+        if phrase in text:
+            operations.append(op_name)
 
-    # Build operation chain
-    operation_steps = []
-    for i in range(min(len(numbers) - 1, len(op_names))):
-        step = f"{numbers[i]} {op_names[i]} {numbers[i+1]}"
-        operation_steps.append(step)
+    # Find symbol-based operations
+    for char in question_text:
+        if char in symbol_ops:
+            operations.append(symbol_ops[char])
 
-    if not operation_steps:
-        operation_steps = ["Single-step operation"]
+    # Remove duplicates while preserving order
+    operations = list(dict.fromkeys(operations))
 
-    # Decide rule
+    # 3. Build operation steps with numbers
+    steps = []
+    for i in range(min(len(numbers) - 1, len(operations))):
+        steps.append(f"{numbers[i]} {operations[i]} {numbers[i+1]}")
+
+    if not steps:
+        steps = ["Single-step reasoning"]
+
+    # 4. Decide rule
     rule = "Left-to-right evaluation"
-    if any(op in op_names for op in ["Addition", "Subtraction"]) and \
-       any(op in op_names for op in ["Multiplication", "Division"]):
-        rule = "BODMAS / Operator precedence"
+    if "Addition" in operations or "Subtraction" in operations:
+        if "Multiplication" in operations or "Division" in operations:
+            rule = "BODMAS / Operator precedence"
 
-    # ---------- RENDER ----------
+    # 5. Render
     st.markdown("### Reasoning Flow (Question-Specific)")
 
     cols = st.columns(4)
@@ -127,7 +155,7 @@ def render_reasoning_flow(question_text):
             <div style="border:1px solid #334155;
             border-radius:12px;padding:14px;
             text-align:center;background:#020617;">
-            <b>Operations</b><br>{'<br>'.join(operation_steps)}
+            <b>Operations</b><br>{'<br>'.join(steps)}
             </div>
             """,
             unsafe_allow_html=True
@@ -156,7 +184,6 @@ def render_reasoning_flow(question_text):
             """,
             unsafe_allow_html=True
         )
-
 
 
 # ---------------------------------------------------------
