@@ -14,7 +14,7 @@ from revision.revision_ui import render_revision_page
 def reset_app():
     for k in list(st.session_state.keys()):
         del st.session_state[k]
-    st.stop()
+    st.experimental_rerun()
 
 
 # ---------------------------------------------------------
@@ -76,8 +76,7 @@ def solo_quiz_page():
 
     st.checkbox(
         "🎯 Demo Mode (stable behaviour for live demo)",
-        key="demo_mode",
-        help="Locks predictable execution for presentations"
+        key="demo_mode"
     )
 
     mode = st.selectbox(
@@ -88,18 +87,20 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start / Restart Quiz
+    # ---------------- START / RESTART FIX ----------------
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
-            time.sleep(0.5)  # UX polish
+            time.sleep(0.3)
             st.session_state["engine"] = QuizEngine(mode, subject)
             st.session_state["solo_started"] = True
-        st.stop()
+
+        st.experimental_rerun()
+    # ----------------------------------------------------
 
     engine = st.session_state.get("engine")
 
     if not engine:
-        st.info("Click 'Start / Restart Quiz' to begin.")
+        st.info("Click **Start / Restart Quiz** to begin.")
         return
 
     # Sync engine parameters
@@ -112,7 +113,7 @@ def solo_quiz_page():
         st.success("🎉 Quiz complete!")
         if st.button("📊 View Dashboard"):
             st.session_state["page"] = "dashboard"
-            st.stop()
+            st.experimental_rerun()
         return
 
     selected = render_question_UI(q, mode)
@@ -127,14 +128,13 @@ def solo_quiz_page():
         if engine.current_index > 0:
             if st.button("⬅ Back"):
                 engine.current_index -= 1
-                st.stop()
+                st.experimental_rerun()
 
     with col2:
         if st.button("Next ➜"):
             if selected:
                 engine.check_answer(selected)
 
-                # Store lightweight session history
                 st.session_state.history.append({
                     "question": q.get("question"),
                     "selected": selected,
@@ -142,9 +142,9 @@ def solo_quiz_page():
                 })
 
             engine.next_question()
-            st.stop()
+            st.experimental_rerun()
 
-    # Session History (last 3)
+    # Session History
     if st.session_state.history:
         with st.expander("🕘 Session History (Last 3 Attempts)"):
             for item in st.session_state.history[-3:]:
