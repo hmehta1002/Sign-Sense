@@ -4,11 +4,14 @@ import re
 import random
 
 from frontend.ui import apply_theme, render_question_UI
+from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
+from ai.ai_builder import ai_quiz_builder
+from revision.revision_ui import render_revision_page
 
 
 # ---------------------------------------------------------
-# RESET
+# RESET APP
 # ---------------------------------------------------------
 def reset_app():
     for k in list(st.session_state.keys()):
@@ -17,7 +20,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE
+# USER PROFILE & ROLE
 # ---------------------------------------------------------
 def render_user_profile():
     st.sidebar.subheader("User Profile")
@@ -26,7 +29,7 @@ def render_user_profile():
 
 
 # ---------------------------------------------------------
-# INLINE AVATAR (DEMO SAFE)
+# INLINE DEMO AVATAR (ALWAYS VISIBLE)
 # ---------------------------------------------------------
 def render_demo_avatar():
     st.markdown(
@@ -45,7 +48,7 @@ def render_demo_avatar():
 
 
 # ---------------------------------------------------------
-# DYSLEXIC MEANING-FIRST DECOMPOSITION
+# DYSLEXIC: MEANING-FIRST DECOMPOSITION
 # ---------------------------------------------------------
 def render_dyslexic_decomposition(question_text):
     numbers = re.findall(r"\b\d+\b", question_text)
@@ -60,36 +63,41 @@ def render_dyslexic_decomposition(question_text):
         ops.append("Subtraction")
 
     st.markdown("### Question Breakdown")
-    st.write(f"**Action:** Simplify / Solve")
+    st.write("**Action:** Solve / Simplify")
     st.write(f"**Numbers:** {', '.join(numbers)}")
     st.write(f"**Operations:** {', '.join(ops)}")
-    st.write("**Goal:** Find the final answer")
+    st.write("**Goal:** Find the correct final answer")
 
 
 # ---------------------------------------------------------
-# REASONING FLOW (QUESTION SPECIFIC)
+# QUESTION-SPECIFIC REASONING FLOW (ISL + ADHD)
 # ---------------------------------------------------------
 def render_reasoning_flow(question_text):
     numbers = re.findall(r"\b\d+\b", question_text)
-    st.markdown("### Reasoning Flow")
+
+    rule = "Left-to-right"
+    if ("+" in question_text or "-" in question_text) and \
+       ("×" in question_text or "÷" in question_text):
+        rule = "BODMAS / Operator precedence"
+
+    st.markdown("### Reasoning Flow (Question-Specific)")
 
     cols = st.columns(4)
-    labels = ["Numbers", "Operations", "Rule", "Outcome"]
-    values = [
-        ", ".join(numbers),
-        "Detected from question",
-        "Correct order applied",
-        "Final Answer"
+    blocks = [
+        ("Numbers", ", ".join(numbers)),
+        ("Operations", "Detected from question"),
+        ("Rule Applied", rule),
+        ("Outcome", "Final Answer")
     ]
 
-    for col, l, v in zip(cols, labels, values):
+    for col, (title, value) in zip(cols, blocks):
         with col:
             st.markdown(
                 f"""
                 <div style="border:1px solid #334155;
-                border-radius:10px;padding:12px;
+                border-radius:12px;padding:14px;
                 text-align:center;background:#020617;">
-                <b>{l}</b><br>{v}
+                <b>{title}</b><br>{value}
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -103,13 +111,12 @@ def render_cognitive_replay():
     st.markdown("### Cognitive Replay")
     steps = [
         "Numbers identified",
-        "Operation order chosen",
+        "Operation order selected",
         "Rule applied",
         "Answer derived"
     ]
     for s in steps:
         st.write(f"- {s}")
-        time.sleep(0.2)
 
 
 # ---------------------------------------------------------
@@ -124,10 +131,13 @@ def render_classroom_dashboard():
     st.success(f"Classroom Code: {st.session_state.class_code}")
 
     st.markdown("### Cognitive Heatmap (Simulated)")
+
     st.progress(0.8)
     st.write("Numbers understood: 80%")
+
     st.progress(0.45)
     st.write("Operation confusion: 45%")
+
     st.progress(0.2)
     st.write("Rule misunderstanding: 20%")
 
@@ -135,9 +145,23 @@ def render_classroom_dashboard():
 
 
 # ---------------------------------------------------------
-# SOLO QUIZ
+# SIDEBAR NAVIGATION (RESTORED)
 # ---------------------------------------------------------
-def solo_quiz():
+def sidebar_navigation():
+    pages = {
+        "Solo Quiz": "solo",
+        "Live Session": "live",
+        "Revision Lab": "revision",
+        "Dashboard": "dashboard",
+        "Admin / AI Quiz Builder": "admin_ai",
+    }
+    return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
+
+
+# ---------------------------------------------------------
+# SOLO QUIZ PAGE (FULL)
+# ---------------------------------------------------------
+def solo_quiz_page():
     st.header("Solo Quiz")
 
     mode = st.selectbox(
@@ -145,19 +169,24 @@ def solo_quiz():
         ["standard", "dyslexia", "adhd", "isl"]
     )
 
-    if st.button("Start Quiz"):
-        st.session_state.engine = QuizEngine(mode, "math")
+    subject_label = st.selectbox("Subject", ["Math", "English"])
+    subject = subject_label.lower()
+
+    if st.button("Start / Restart Quiz"):
+        st.session_state.engine = QuizEngine(mode, subject)
+        st.experimental_rerun()
 
     engine = st.session_state.get("engine")
     if not engine:
+        st.info("Click Start / Restart Quiz to begin.")
         return
 
     q = engine.get_current_question()
-    if not q:
-        st.success("Quiz complete")
+    if q is None:
+        st.success("Quiz complete.")
         return
 
-    render_question_UI(q, mode)
+    selected = render_question_UI(q, mode)
 
     if mode == "dyslexia":
         render_dyslexic_decomposition(q["question"])
@@ -169,9 +198,40 @@ def solo_quiz():
     if mode == "isl":
         render_demo_avatar()
 
-    if st.button("Next"):
-        engine.next_question()
-        st.experimental_rerun()
+    col1, col2 = st.columns(2)
+    with col2:
+        if st.button("Next"):
+            if selected:
+                engine.check_answer(selected)
+            engine.next_question()
+            st.experimental_rerun()
+
+
+# ---------------------------------------------------------
+# ROUTER (RESTORED)
+# ---------------------------------------------------------
+def route_page(page):
+    role = st.session_state.get("role", "Student")
+
+    if role == "Teacher":
+        render_classroom_dashboard()
+        return
+
+    if page == "solo":
+        solo_quiz_page()
+    elif page == "dashboard":
+        render_dashboard(st.session_state.get("engine"))
+    elif page == "revision":
+        render_revision_page(st.session_state.get("engine"))
+    elif page == "live":
+        engine = st.session_state.get("engine")
+        if engine:
+            from live.live_sync import live_session_page
+            live_session_page(engine, {})
+        else:
+            st.warning("Start a quiz first.")
+    elif page == "admin_ai":
+        ai_quiz_builder()
 
 
 # ---------------------------------------------------------
@@ -186,12 +246,8 @@ def main():
     if st.sidebar.button("Reset App"):
         reset_app()
 
-    role = st.session_state.get("role", "Student")
-
-    if role == "Teacher":
-        render_classroom_dashboard()
-    else:
-        solo_quiz()
+    page = sidebar_navigation()
+    route_page(page)
 
 
 if __name__ == "__main__":
