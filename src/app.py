@@ -1,11 +1,13 @@
+import os
 import streamlit as st
+import openai
+
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
 from revision.revision_ui import render_revision_page
 
-# ---- Classroom backend (Firebase + local fallback) ----
 from backend.cloud_store import (
     create_classroom,
     join_classroom,
@@ -15,13 +17,17 @@ from backend.cloud_store import (
 )
 
 # ---------------------------------------------------------
+# OPENAI SETUP
+# ---------------------------------------------------------
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# ---------------------------------------------------------
 # RESET APP
 # ---------------------------------------------------------
 def reset_app():
     for k in list(st.session_state.keys()):
         del st.session_state[k]
     st.experimental_rerun()
-
 
 # ---------------------------------------------------------
 # USER PROFILE
@@ -30,7 +36,6 @@ def render_user_profile():
     st.sidebar.subheader("User Profile")
     role = st.sidebar.selectbox("Role", ["Student", "Teacher"])
     st.session_state["role"] = role
-
 
 # ---------------------------------------------------------
 # SIDEBAR NAVIGATION
@@ -45,6 +50,65 @@ def sidebar_navigation():
     }
     return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
+# ---------------------------------------------------------
+# AI LEARNING ASSISTANT
+# ---------------------------------------------------------
+def render_ai_learning_assistant(question_text: str, mode: str):
+    st.subheader("🤖 AI Learning Assistant")
+
+    if not openai.api_key:
+        st.info("AI assistant unavailable.")
+        return
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("Ask about the concept (not the answer)")
+
+    if user_input:
+        st.session_state.chat_history.append(
+            {"role": "user", "content": user_input}
+        )
+
+        system_prompt = f"""
+You are a learning assistant inside an educational quiz app.
+
+STRICT RULES:
+- Never give the final answer.
+- Never choose an option.
+- Explain concepts only.
+- Be concise and clear.
+
+Adapt to accessibility mode:
+- ISL: step-by-step, visual wording
+- Dyslexia: short, structured sentences
+- ADHD: bullet points, minimal text
+
+Question:
+{question_text}
+"""
+
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_input},
+                ],
+                temperature=0.3,
+            )
+            reply = response.choices[0].message.content
+        except Exception:
+            reply = "I’m having trouble right now. Please try again."
+
+        st.session_state.chat_history.append(
+            {"role": "assistant", "content": reply}
+        )
+        st.experimental_rerun()
 
 # ---------------------------------------------------------
 # TEACHER CLASSROOM
@@ -52,21 +116,18 @@ def sidebar_navigation():
 def teacher_classroom():
     st.header("Insight Classroom")
 
-    # Create classroom
     if "class_code" not in st.session_state:
         if st.button("Create Classroom"):
             st.session_state["class_code"] = create_classroom()
     else:
         st.success(f"Classroom Code: {st.session_state['class_code']}")
 
-        # Upload question
         st.subheader("Upload Question")
         q = st.text_input("Enter question for students")
         if st.button("Add Question") and q:
             add_classroom_question(st.session_state["class_code"], q)
             st.success("Question added")
 
-        # View classroom state
         classroom = get_classroom_state(st.session_state["class_code"])
 
         st.subheader("Student Progress")
@@ -77,11 +138,9 @@ def teacher_classroom():
             for name, data in students.items():
                 st.write(f"• {name}: {data.get('status', '—')}")
 
-        # View uploaded questions
         st.subheader("Questions")
         for i, q in enumerate(classroom.get("questions", [])):
             st.write(f"Q{i+1}: {q}")
-
 
 # ---------------------------------------------------------
 # STUDENT CLASSROOM
@@ -100,31 +159,25 @@ def student_classroom():
         else:
             st.error("Invalid classroom code")
 
-    # If joined, show questions
     if "joined_code" in st.session_state:
         classroom = get_classroom_state(st.session_state["joined_code"])
         questions = classroom.get("questions", [])
 
         st.subheader("Classroom Questions")
-
-        if not questions:
-            st.info("No questions uploaded yet")
-        else:
-            for i, q in enumerate(questions):
-                st.markdown(f"**Q{i+1}: {q}**")
-                ans = st.text_input("Your answer", key=f"ans_{i}")
-                if st.button("Submit Answer", key=f"submit_{i}"):
-                    submit_classroom_answer(
-                        st.session_state["joined_code"],
-                        st.session_state["student_name"],
-                        i,
-                        ans,
-                    )
-                    st.success("Answer submitted")
-
+        for i, q in enumerate(questions):
+            st.markdown(f"**Q{i+1}: {q}**")
+            ans = st.text_input("Your answer", key=f"ans_{i}")
+            if st.button("Submit Answer", key=f"submit_{i}"):
+                submit_classroom_answer(
+                    st.session_state["joined_code"],
+                    st.session_state["student_name"],
+                    i,
+                    ans,
+                )
+                st.success("Answer submitted")
 
 # ---------------------------------------------------------
-# SOLO QUIZ PAGE
+# SOLO QUIZ
 # ---------------------------------------------------------
 def solo_quiz_page():
     st.header("Solo Quiz")
@@ -153,12 +206,15 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
+    with st.expander("💡 Need help understanding this question?"):
+        render_ai_learning_assistant(q["question"], mode)
+
     if st.button("Next"):
         if selected:
             engine.check_answer(selected)
         engine.next_question()
+        st.session_state.pop("chat_history", None)
         st.experimental_rerun()
-
 
 # ---------------------------------------------------------
 # ROUTER
@@ -170,27 +226,24 @@ def route_page(page):
         teacher_classroom()
         return
 
-    if role == "Student" and page == "solo":
+    if page == "solo":
         solo_quiz_page()
-    elif role == "Student" and page == "dashboard":
+    elif page == "dashboard":
         render_dashboard(st.session_state.get("engine"))
-    elif role == "Student" and page == "revision":
+    elif page == "revision":
         render_revision_page(st.session_state.get("engine"))
-    elif role == "Student" and page == "live":
+    elif page == "live":
         engine = st.session_state.get("engine")
         if engine:
             from live.live_sync import live_session_page
             live_session_page(engine, {})
         else:
             st.warning("Start a quiz first.")
-    elif role == "Student" and page == "admin_ai":
+    elif page == "admin_ai":
         ai_quiz_builder()
 
-    # Classroom join available to students at all times
-    if role == "Student":
-        st.divider()
-        student_classroom()
-
+    st.divider()
+    student_classroom()
 
 # ---------------------------------------------------------
 # MAIN
@@ -206,7 +259,6 @@ def main():
 
     page = sidebar_navigation()
     route_page(page)
-
 
 if __name__ == "__main__":
     main()
