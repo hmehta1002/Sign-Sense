@@ -1,96 +1,107 @@
 import streamlit as st
 import time
+import os
 
 # ---------------------------------------------------------
-# SAFE IMPORTS (use real code if present, fallback if not)
+# IMPORT EXISTING MODULES (OLD PROTOTYPE)
 # ---------------------------------------------------------
-try:
-    from backend.logic import QuizEngine
-    from backend.cloud_store import (
-        create_classroom,
-        join_classroom,
-        add_classroom_question,
-        submit_classroom_answer,
-        get_classroom_state,
-    )
-    from frontend.dashboard import render_dashboard
-    from revision.revision_ui import render_revision_page
-    from ai.ai_builder import ai_quiz_builder
-except Exception:
-    # ---------- FALLBACKS ----------
-    class QuizEngine:
-        def __init__(self, mode, subject):
-            self.mode = mode
-            self.subject = subject
-            self.i = 0
-            self.questions = [
-                {
-                    "question": "48 ÷ 6 × 4",
-                    "options": ["8", "16", "32"],
-                    "answer": "32",
-                }
-            ]
-
-        def get_current_question(self):
-            return self.questions[self.i] if self.i < len(self.questions) else None
-
-        def check_answer(self, _): pass
-        def next_question(self): self.i += 1
-
-    _CLASSROOM = {"questions": [], "students": {}}
-
-    def create_classroom(): return "ABC123"
-    def join_classroom(code, name):
-        _CLASSROOM["students"][name] = {"status": "Joined"}
-        return True
-    def add_classroom_question(code, q):
-        _CLASSROOM["questions"].append(q)
-    def submit_classroom_answer(code, name, i, ans):
-        _CLASSROOM["students"][name]["status"] = "Answered"
-    def get_classroom_state(code):
-        return _CLASSROOM
-
-    def render_dashboard(engine):
-        st.subheader("📊 Dashboard")
-        st.write("Dashboard placeholder")
-
-    def render_revision_page(engine):
-        st.subheader("🔁 Revision Lab")
-        st.write("Revision placeholder")
-
-    def ai_quiz_builder():
-        st.subheader("🤖 AI Quiz Builder")
-        st.write("AI Builder placeholder")
+from backend.logic import QuizEngine
+from backend.cloud_store import (
+    create_classroom,
+    join_classroom,
+    add_classroom_question,
+    submit_classroom_answer,
+    get_classroom_state,
+)
+from frontend.ui import apply_theme, render_question_UI
+from frontend.dashboard import render_dashboard
+from revision.revision_ui import render_revision_page
+from ai.ai_builder import ai_quiz_builder
 
 # ---------------------------------------------------------
-# SESSION INIT
+# SESSION STATE INIT
 # ---------------------------------------------------------
-if "cognitive_log" not in st.session_state:
-    st.session_state.cognitive_log = {}
+st.session_state.setdefault("cognitive_log", {})
+st.session_state.setdefault("chat_history", [])
 
 # ---------------------------------------------------------
-# COGNITIVE REPLAY LOGGER
+# COGNITIVE LOGGING (NEW – ADDITIVE)
 # ---------------------------------------------------------
-def log_cognitive(student, question, data):
-    st.session_state.cognitive_log.setdefault(student, {}).setdefault(question, []).append(data)
+def log_cognitive(student, question, meta):
+    st.session_state.cognitive_log.setdefault(student, {}).setdefault(question, []).append(meta)
 
 # ---------------------------------------------------------
-# SOLO QUIZ
+# DYNAMIC FLOW OVERLAY (NEW – ADDITIVE)
+# ---------------------------------------------------------
+def dynamic_flow_overlay(question, subject):
+    st.markdown("#### 🔄 Reasoning Flow")
+    if subject == "math":
+        st.code(
+            "Read numbers\n↓\nApply BODMAS\n↓\nSolve step-by-step\n↓\nAnswer"
+        )
+    else:
+        st.code(
+            "Read sentence\n↓\nIdentify key idea\n↓\nEliminate options\n↓\nAnswer"
+        )
+
+# ---------------------------------------------------------
+# AI LEARNING ASSISTANT (SAFE SIDEBAR CHATBOT)
+# ---------------------------------------------------------
+def render_chatbot():
+    st.sidebar.divider()
+    st.sidebar.subheader("🤖 AI Learning Assistant")
+
+    user_input = st.sidebar.text_input("Ask how to think:", key="chat_input")
+
+    if st.sidebar.button("Ask AI"):
+        if not user_input.strip():
+            return
+
+        st.session_state.chat_history.append(("You", user_input))
+
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            reply = "AI not connected. In full version, this explains the steps."
+        else:
+            try:
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key)
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Explain concepts step-by-step. Do not give direct answers.",
+                        },
+                        {"role": "user", "content": user_input},
+                    ],
+                    max_tokens=200,
+                )
+                reply = response.choices[0].message.content
+            except Exception:
+                reply = "AI temporarily unavailable."
+
+        st.session_state.chat_history.append(("AI", reply))
+
+    for who, msg in st.session_state.chat_history[-6:]:
+        st.sidebar.markdown(f"**{who}:** {msg}")
+
+# ---------------------------------------------------------
+# SOLO QUIZ (OLD + NEW)
 # ---------------------------------------------------------
 def solo_quiz():
     st.header("📘 Solo Quiz")
 
     mode = st.selectbox(
         "Accessibility Mode",
-        ["standard", "isl", "adhd", "dyslexia"]
+        ["standard", "isl", "adhd", "dyslexia"],
     )
 
-    # 🔴 IMPORTANT FIX: lowercase subject
     subject = st.selectbox("Subject", ["Math", "English"]).lower()
 
     if st.button("Start / Restart Quiz"):
         st.session_state.engine = QuizEngine(mode, subject)
-        st.session_state.start_time = time.time()
+        st.session_state.q_start_time = time.time()
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -100,33 +111,44 @@ def solo_quiz():
 
     q = engine.get_current_question()
     if not q:
-        st.success("Quiz completed 🎉")
+        st.success("🎉 Quiz completed!")
         return
 
-    st.subheader(q["question"])
-    choice = st.radio("Choose an option", q["options"])
+    # ---- OLD PROTOTYPE UI (UNCHANGED) ----
+    selected = render_question_UI(q, mode)
 
-    if st.button("Next"):
-        spent = int(time.time() - st.session_state.start_time)
+    # ---- NEW FLOW OVERLAY (ADDITIVE) ----
+    if mode in ["isl", "adhd"]:
+        dynamic_flow_overlay(q["question"], subject)
 
-        log_cognitive(
-            "Solo_User",
-            q["question"],
-            {
-                "mode": mode,
-                "time_spent": spent,
-                "option_changes": 0,
-                "hesitation": "Yes" if spent > 10 else "No",
-            },
-        )
+    col1, col2 = st.columns(2)
 
-        engine.check_answer(choice)
-        engine.next_question()
-        st.session_state.start_time = time.time()
-        st.experimental_rerun()
+    with col1:
+        if engine.current_index > 0:
+            if st.button("⬅ Back"):
+                engine.current_index -= 1
+                st.experimental_rerun()
+
+    with col2:
+        if st.button("Next ➜"):
+            if selected:
+                time_spent = int(time.time() - st.session_state.q_start_time)
+                log_cognitive(
+                    "Solo_User",
+                    q["question"],
+                    {
+                        "mode": mode,
+                        "time_spent": time_spent,
+                        "hesitation": time_spent > 10,
+                    },
+                )
+                engine.check_answer(selected)
+            engine.next_question()
+            st.session_state.q_start_time = time.time()
+            st.experimental_rerun()
 
 # ---------------------------------------------------------
-# STUDENT CLASSROOM
+# STUDENT CLASSROOM (OLD)
 # ---------------------------------------------------------
 def student_classroom():
     st.header("🎓 Student Classroom")
@@ -137,19 +159,19 @@ def student_classroom():
     if st.button("Join Classroom"):
         if join_classroom(code, name):
             st.session_state.student = name
-            st.session_state.joined = code
+            st.session_state.joined_code = code
             st.success("Joined classroom")
         else:
             st.error("Invalid code")
 
-    if "joined" in st.session_state:
-        room = get_classroom_state(st.session_state.joined)
-        for i, q in enumerate(room.get("questions", [])):
+    if "joined_code" in st.session_state:
+        classroom = get_classroom_state(st.session_state.joined_code)
+        for i, q in enumerate(classroom.get("questions", [])):
             st.markdown(f"**Q{i+1}: {q}**")
-            ans = st.text_input("Answer", key=f"a{i}")
-            if st.button("Submit", key=f"s{i}"):
+            ans = st.text_input("Answer", key=f"ans_{i}")
+            if st.button("Submit", key=f"submit_{i}"):
                 submit_classroom_answer(
-                    st.session_state.joined,
+                    st.session_state.joined_code,
                     st.session_state.student,
                     i,
                     ans,
@@ -157,7 +179,7 @@ def student_classroom():
                 st.success("Submitted")
 
 # ---------------------------------------------------------
-# TEACHER CLASSROOM + COGNITIVE REPLAY
+# TEACHER CLASSROOM + INSIGHTS (OLD + NEW)
 # ---------------------------------------------------------
 def teacher_classroom():
     st.header("🧑‍🏫 Insight Classroom")
@@ -168,45 +190,39 @@ def teacher_classroom():
     else:
         st.success(f"Classroom Code: {st.session_state.class_code}")
 
-        q = st.text_input("Add Question")
+        q = st.text_input("Upload Question")
         if st.button("Add Question") and q:
             add_classroom_question(st.session_state.class_code, q)
-            st.success("Added")
+            st.success("Question added")
 
-        room = get_classroom_state(st.session_state.class_code)
+        classroom = get_classroom_state(st.session_state.class_code)
+        students = classroom.get("students", {})
+
         st.subheader("Students")
-        for s in room.get("students", {}):
-            st.write(f"• {s}")
+        for name, data in students.items():
+            st.write(f"• {name} — {data.get('status', 'Joined')}")
 
+    # ---- NEW COGNITIVE REPLAY ----
     st.divider()
     st.subheader("🧠 Cognitive Replay")
 
-    log = st.session_state.cognitive_log
-    if not log:
-        st.warning("Run at least one quiz attempt to generate replay data.")
-        return
-
-    student = st.selectbox("Student", list(log.keys()))
-    question = st.selectbox("Question", list(log[student].keys()))
-    r = log[student][question][-1]
-
-    st.markdown(f"""
-**Question:** {question}  
-Mode: **{r['mode']}**  
-Time Spent: **{r['time_spent']} sec**  
-Hesitation: **{r['hesitation']}**
-""")
-
-    insight = "Stable reasoning"
-    if r["hesitation"] == "Yes":
-        insight = "Conceptual hesitation detected"
-    st.info(f"Insight: {insight}")
+    if not st.session_state.cognitive_log:
+        st.info("No cognitive data yet.")
+    else:
+        for student, qs in st.session_state.cognitive_log.items():
+            st.markdown(f"**{student}**")
+            for q, entries in qs.items():
+                last = entries[-1]
+                st.write(
+                    f"- {q} | time: {last['time_spent']}s | hesitation: {last['hesitation']}"
+                )
 
 # ---------------------------------------------------------
-# MAIN
+# MAIN ROUTER (OLD)
 # ---------------------------------------------------------
 def main():
-    st.set_page_config("AI Quiz Portal", layout="wide")
+    st.set_page_config(page_title="SignSense", layout="wide")
+    apply_theme()
 
     page = st.sidebar.radio(
         "Navigation",
@@ -241,5 +257,8 @@ def main():
     elif page == "🤖 Admin / AI Quiz Builder":
         ai_quiz_builder()
 
+    render_chatbot()
+
+# ---------------------------------------------------------
 if __name__ == "__main__":
     main()
