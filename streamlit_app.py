@@ -203,18 +203,18 @@ def teacher_classroom():
             st.write(f"• {name} — {data.get('status', 'Joined')}")
 
     # ---- NEW COGNITIVE REPLAY ----
-    st.divider()
-    st.subheader("🧠 Cognitive Replay")
+        st.divider()
+        st.subheader("🧠 Cognitive Replay")
 
-    if not st.session_state.cognitive_log:
-        st.info("No cognitive data yet.")
-    else:
-        for student, qs in st.session_state.cognitive_log.items():
-            st.markdown(f"**{student}**")
-            for q, entries in qs.items():
-                last = entries[-1]
-                st.write(
-                    f"- {q} | time: {last['time_spent']}s | hesitation: {last['hesitation']}"
+        if not st.session_state.cognitive_log:
+            st.info("No cognitive data yet.")
+        else:
+            for student, qs in st.session_state.cognitive_log.items():
+                st.markdown(f"**{student}**")
+                for q, entries in qs.items():
+                    last = entries[-1]
+                    st.write(
+                        f"- {q} | time: {last['time_spent']}s | hesitation: {last['hesitation']}"
                 )
 
 # ---------------------------------------------------------
