@@ -19,7 +19,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE (INITIALS AVATAR)
+# USER PROFILE (CLEAN, PROFESSIONAL)
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
@@ -35,30 +35,7 @@ def render_user_profile():
 
     if username:
         st.session_state.username = username
-        initials = username.strip()[0].upper()
-
-        st.sidebar.markdown(
-            f"""
-            <div style="
-                width:60px;
-                height:60px;
-                border-radius:50%;
-                background:#1e293b;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                color:#e5e7eb;
-                font-size:24px;
-                font-weight:600;
-                margin-bottom:8px;
-            ">
-                {initials}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.sidebar.caption("Accessibility profile active")
+        st.sidebar.caption("Accessibility features enabled")
 
 
 # ---------------------------------------------------------
@@ -73,7 +50,7 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES (GUARANTEED)
+# ISL NUMBER VISUAL CUES (GUARANTEED RENDER)
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
@@ -98,7 +75,7 @@ def render_isl_number_signs(question_text: str):
                 ">
                     <div style="font-size:28px;font-weight:600;">{num}</div>
                     <div style="font-size:12px;color:#94a3b8;">
-                        Visual number cue
+                        Visual number cue for ISL learners
                     </div>
                 </div>
                 """,
@@ -107,37 +84,19 @@ def render_isl_number_signs(question_text: str):
 
 
 # ---------------------------------------------------------
-# ISL AVATAR (NEUTRAL, PROFESSIONAL)
+# SOPHISTICATED DEMO AVATAR (REALISTIC, NEUTRAL)
 # ---------------------------------------------------------
-def render_isl_avatar():
-    st.markdown(
-        """
-        <div style="
-            width:70px;
-            height:70px;
-            border-radius:50%;
-            background:#0f172a;
-            border:2px solid #334155;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:14px;
-            color:#e5e7eb;
-            font-weight:600;
-            margin-bottom:6px;
-        ">
-            ISL
-        </div>
-        <div style="font-size:12px;color:#94a3b8;">
-            ISL Guide
-        </div>
-        """,
-        unsafe_allow_html=True
+def render_isl_demo_avatar():
+    avatar_url = (
+        "https://models.readyplayer.me/65f2c7f3f8b7c4b0c1f4c7b2.png"
     )
 
+    st.image(avatar_url, width=130)
+    st.caption("ISL Demonstration Avatar")
+
 
 # ---------------------------------------------------------
-# ISL EXPLANATION PANEL (WITH AVATAR)
+# ISL EXPLANATION PANEL (WITH SOPHISTICATED AVATAR)
 # ---------------------------------------------------------
 def render_isl_explanation(question_data):
     st.success("ISL Accessibility Mode Active")
@@ -147,10 +106,10 @@ def render_isl_explanation(question_data):
         "Visual, non-audio guidance designed for Indian Sign Language learners."
     )
 
-    col1, col2 = st.columns([1, 6])
+    col1, col2 = st.columns([2, 6])
 
     with col1:
-        render_isl_avatar()
+        render_isl_demo_avatar()
 
     with col2:
         if question_data and "question" in question_data:
@@ -204,6 +163,7 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
+    # Start / Restart Quiz
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
@@ -230,6 +190,7 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
+    # ISL MODE SUPPORT
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
