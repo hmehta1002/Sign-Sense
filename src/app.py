@@ -19,7 +19,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE (CLEAN, PROFESSIONAL)
+# USER PROFILE
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
@@ -50,7 +50,33 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES (GUARANTEED RENDER)
+# INLINE ISL DEMO AVATAR (ALWAYS RENDERS)
+# ---------------------------------------------------------
+def render_isl_demo_avatar():
+    st.markdown(
+        """
+        <svg width="110" height="140" viewBox="0 0 110 140"
+             xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="5" width="100" height="130" rx="18"
+                fill="#0f172a" stroke="#334155" stroke-width="2"/>
+          <circle cx="55" cy="45" r="18" fill="#cbd5e1"/>
+          <rect x="25" y="70" width="60" height="40" rx="18"
+                fill="#94a3b8"/>
+          <text x="55" y="128"
+                font-size="10"
+                fill="#cbd5e1"
+                text-anchor="middle"
+                font-family="Arial, sans-serif">
+            ISL Demo Avatar
+          </text>
+        </svg>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# ---------------------------------------------------------
+# ISL NUMBER VISUAL CUES (GUARANTEED)
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
@@ -84,19 +110,7 @@ def render_isl_number_signs(question_text: str):
 
 
 # ---------------------------------------------------------
-# SOPHISTICATED DEMO AVATAR (REALISTIC, NEUTRAL)
-# ---------------------------------------------------------
-def render_isl_demo_avatar():
-    avatar_url = (
-        "https://models.readyplayer.me/65f2c7f3f8b7c4b0c1f4c7b2.png"
-    )
-
-    st.image(avatar_url, width=130)
-    st.caption("ISL Demonstration Avatar")
-
-
-# ---------------------------------------------------------
-# ISL EXPLANATION PANEL (WITH SOPHISTICATED AVATAR)
+# ISL EXPLANATION PANEL
 # ---------------------------------------------------------
 def render_isl_explanation(question_data):
     st.success("ISL Accessibility Mode Active")
@@ -163,7 +177,6 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start / Restart Quiz
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
@@ -190,7 +203,6 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
-    # ISL MODE SUPPORT
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
