@@ -1,5 +1,6 @@
 import streamlit as st
 import time
+import re
 
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
@@ -18,7 +19,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE & 3D AVATAR
+# USER PROFILE & AVATAR
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
@@ -35,10 +36,10 @@ def render_user_profile():
     if username:
         st.session_state.username = username
         avatar_url = (
-            f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
+            f"https://api.dicebear.com/7.x/adventurer-neutral/svg?seed={username}"
         )
-        st.sidebar.image(avatar_url, width=120)
-        st.sidebar.caption("3D Avatar (auto-generated, privacy-safe)")
+        st.sidebar.image(avatar_url, width=110)
+        st.sidebar.caption("User Avatar")
 
 
 # ---------------------------------------------------------
@@ -53,54 +54,64 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# IMPRESSIVE ISL MODE (AVATAR + STEP-SYNC EXPLANATION)
+# ISL NUMBER SIGNS (REAL, SAFE)
 # ---------------------------------------------------------
-def highlight_question_keywords(question_text: str):
-    keywords = [
-        "sum", "difference", "total", "equal",
-        "greater", "less", "add", "subtract"
-    ]
+def render_isl_number_signs(question_text: str):
+    numbers = re.findall(r"\b\d+\b", question_text)
+    numbers = list(dict.fromkeys(numbers))[:2]  # max 2 numbers
 
-    highlighted = question_text
-    for word in keywords:
-        highlighted = highlighted.replace(
-            word, f"**{word.upper()}**"
-        )
+    if not numbers:
+        return
 
-    st.markdown("### 🧠 Key Focus Areas")
-    st.markdown(highlighted)
+    st.markdown("### 🔢 ISL Number Signs")
+
+    cols = st.columns(len(numbers))
+    for col, num in zip(cols, numbers):
+        with col:
+            st.image(
+                f"https://isl-dataset.netlify.app/numbers/{num}.png",
+                width=90
+            )
+            st.caption(f"ISL sign for {num}")
 
 
-def render_impressive_isl_mode(question_data):
+# ---------------------------------------------------------
+# ISL EXPLANATION (IMPROVED, NOT WEIRD)
+# ---------------------------------------------------------
+def render_isl_explanation(question_data):
     st.success("🤟 ISL Accessibility Mode Active")
 
     isl_avatar_url = (
-        "https://api.dicebear.com/7.x/bottts/svg?seed=isl_explainer"
+        "https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=isl_guide"
     )
 
-    col1, col2 = st.columns([1, 3])
+    st.markdown("### 📖 Visual Explanation (ISL-Assisted)")
+    st.caption(
+        "Visual sequencing designed for Indian Sign Language learners."
+    )
+
+    col1, col2 = st.columns([1, 4])
 
     with col1:
-        st.image(isl_avatar_url, width=160)
-        st.caption("ISL Sign Avatar")
+        st.image(isl_avatar_url, width=100)
+        st.caption("ISL Guide")
 
     with col2:
-        st.markdown("### 📖 Visual Explanation (ISL-Assisted)")
-        st.info(
-            "Explanation is presented step-by-step for sign-language learners "
-            "using visual sequencing instead of audio."
-        )
+        if question_data and "question" in question_data:
+            st.markdown(
+                f"🧠 **Question focus:** {question_data['question']}"
+            )
 
         steps = [
-            "Identify the **important words or numbers** in the question.",
-            "Understand **what the question is asking**.",
+            "Look at the **numbers and key words**.",
+            "Understand **what is being asked**.",
             "Apply the **correct rule or concept**.",
-            "Choose the **best answer** from the options."
+            "Choose the **best answer**."
         ]
 
         for step in steps:
             st.write("👉 " + step)
-            time.sleep(0.35)
+            time.sleep(0.25)
 
 
 # ---------------------------------------------------------
@@ -126,7 +137,7 @@ def solo_quiz_page():
     init_session_utilities()
 
     st.checkbox(
-        "🎯 Demo Mode (stable behaviour for live demo)",
+        "🎯 Demo Mode (stable for live demo)",
         key="demo_mode"
     )
 
@@ -138,12 +149,11 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start / Restart Quiz (STABLE)
+    # Start / Restart
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
             st.session_state["engine"] = QuizEngine(mode, subject)
-            st.session_state["solo_started"] = True
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -166,11 +176,11 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
-    # ---- ISL MODE ADDITION ----
+    # ---------- ISL MODE ----------
     if mode == "isl":
-        highlight_question_keywords(q.get("question", ""))
-        render_impressive_isl_mode(q)
-    # --------------------------
+        render_isl_number_signs(q.get("question", ""))
+        render_isl_explanation(q)
+    # -----------------------------
 
     st.caption(
         "ℹ️ Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
@@ -188,23 +198,12 @@ def solo_quiz_page():
         if st.button("Next ➜"):
             if selected:
                 engine.check_answer(selected)
-
                 st.session_state.history.append({
                     "question": q.get("question"),
-                    "selected": selected,
-                    "correct": q.get("answer")
+                    "selected": selected
                 })
-
             engine.next_question()
             st.experimental_rerun()
-
-    if st.session_state.history:
-        with st.expander("🕘 Session History (Last 3 Attempts)"):
-            for item in st.session_state.history[-3:]:
-                st.write(
-                    f"**Q:** {item['question']}  \n"
-                    f"**Your Answer:** {item['selected']}"
-                )
 
 
 # ---------------------------------------------------------
@@ -224,17 +223,13 @@ def route_page(page_name: str):
     elif page_name == "live":
         engine = st.session_state.get("engine")
         if not engine:
-            st.warning("Start a quiz first to initialize the question engine.")
+            st.warning("Start a quiz first.")
             return
-
         from live.live_sync import live_session_page
         live_session_page(engine, {})
 
     elif page_name == "admin_ai":
         ai_quiz_builder()
-
-    else:
-        st.error("Unknown page.")
 
 
 # ---------------------------------------------------------
@@ -251,7 +246,6 @@ def main():
 
     page = sidebar_navigation()
     st.session_state["page"] = page
-
     route_page(page)
 
 
