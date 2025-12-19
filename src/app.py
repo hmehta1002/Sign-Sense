@@ -53,6 +53,57 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
+# IMPRESSIVE ISL MODE (AVATAR + STEP-SYNC EXPLANATION)
+# ---------------------------------------------------------
+def highlight_question_keywords(question_text: str):
+    keywords = [
+        "sum", "difference", "total", "equal",
+        "greater", "less", "add", "subtract"
+    ]
+
+    highlighted = question_text
+    for word in keywords:
+        highlighted = highlighted.replace(
+            word, f"**{word.upper()}**"
+        )
+
+    st.markdown("### 🧠 Key Focus Areas")
+    st.markdown(highlighted)
+
+
+def render_impressive_isl_mode(question_data):
+    st.success("🤟 ISL Accessibility Mode Active")
+
+    isl_avatar_url = (
+        "https://api.dicebear.com/7.x/bottts/svg?seed=isl_explainer"
+    )
+
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+        st.image(isl_avatar_url, width=160)
+        st.caption("ISL Sign Avatar")
+
+    with col2:
+        st.markdown("### 📖 Visual Explanation (ISL-Assisted)")
+        st.info(
+            "Explanation is presented step-by-step for sign-language learners "
+            "using visual sequencing instead of audio."
+        )
+
+        steps = [
+            "Identify the **important words or numbers** in the question.",
+            "Understand **what the question is asking**.",
+            "Apply the **correct rule or concept**.",
+            "Choose the **best answer** from the options."
+        ]
+
+        for step in steps:
+            st.write("👉 " + step)
+            time.sleep(0.35)
+
+
+# ---------------------------------------------------------
 # SIDEBAR NAVIGATION
 # ---------------------------------------------------------
 def sidebar_navigation():
@@ -87,15 +138,13 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # ---------------- START / RESTART FIX ----------------
+    # Start / Restart Quiz (STABLE)
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
             st.session_state["engine"] = QuizEngine(mode, subject)
             st.session_state["solo_started"] = True
-
         st.experimental_rerun()
-    # ----------------------------------------------------
 
     engine = st.session_state.get("engine")
 
@@ -103,7 +152,6 @@ def solo_quiz_page():
         st.info("Click **Start / Restart Quiz** to begin.")
         return
 
-    # Sync engine parameters
     engine.mode = mode
     engine.subject = subject
 
@@ -117,6 +165,12 @@ def solo_quiz_page():
         return
 
     selected = render_question_UI(q, mode)
+
+    # ---- ISL MODE ADDITION ----
+    if mode == "isl":
+        highlight_question_keywords(q.get("question", ""))
+        render_impressive_isl_mode(q)
+    # --------------------------
 
     st.caption(
         "ℹ️ Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
@@ -144,7 +198,6 @@ def solo_quiz_page():
             engine.next_question()
             st.experimental_rerun()
 
-    # Session History
     if st.session_state.history:
         with st.expander("🕘 Session History (Last 3 Attempts)"):
             for item in st.session_state.history[-3:]:
