@@ -19,13 +19,13 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE (NO CARTOON AVATAR)
+# USER PROFILE
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
         st.session_state.username = ""
 
-    st.sidebar.subheader("👤 User Profile")
+    st.sidebar.subheader("User Profile")
 
     username = st.sidebar.text_input(
         "Enter your name",
@@ -50,19 +50,18 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES (DEMO-SAFE, GUARANTEED)
+# ISL NUMBER VISUAL CUES (GUARANTEED RENDER)
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
-    numbers = list(dict.fromkeys(numbers))[:2]  # max 2 numbers
+    numbers = list(dict.fromkeys(numbers))[:2]
 
     if not numbers:
         return
 
-    st.markdown("### 🔢 ISL Number Focus")
+    st.markdown("### ISL Number Focus")
 
     cols = st.columns(len(numbers))
-
     for col, num in zip(cols, numbers):
         with col:
             st.markdown(
@@ -74,10 +73,9 @@ def render_isl_number_signs(question_text: str):
                     text-align: center;
                     background-color: #020617;
                 ">
-                    <div style="font-size: 32px;">✋</div>
-                    <div style="font-size: 26px; font-weight: 600;">{num}</div>
+                    <div style="font-size: 28px; font-weight: 600;">{num}</div>
                     <div style="font-size: 12px; color: #94a3b8;">
-                        ISL number cue
+                        Visual number cue for ISL learners
                     </div>
                 </div>
                 """,
@@ -89,27 +87,27 @@ def render_isl_number_signs(question_text: str):
 # ISL EXPLANATION PANEL (PROFESSIONAL)
 # ---------------------------------------------------------
 def render_isl_explanation(question_data):
-    st.success("🤟 ISL Accessibility Mode Active")
+    st.success("ISL Accessibility Mode Active")
 
-    st.markdown("### 📖 ISL Visual Explanation Panel")
+    st.markdown("### ISL Visual Explanation Panel")
     st.caption(
         "Visual, non-audio guidance designed for Indian Sign Language learners."
     )
 
     if question_data and "question" in question_data:
         st.markdown(
-            f"🧠 **Question Focus:** {question_data['question']}"
+            f"**Question Focus:** {question_data['question']}"
         )
 
     steps = [
-        "Identify the **numbers and mathematical terms**.",
-        "Understand **what operation or comparison is required**.",
-        "Apply the **relevant rule or simplification**.",
-        "Select the **correct equivalent expression**."
+        "Identify the numbers and mathematical terms.",
+        "Understand what operation or comparison is required.",
+        "Apply the relevant rule or simplification.",
+        "Select the correct equivalent expression."
     ]
 
     for step in steps:
-        st.write("• " + step)
+        st.write(f"- {step}")
 
 
 # ---------------------------------------------------------
@@ -117,11 +115,11 @@ def render_isl_explanation(question_data):
 # ---------------------------------------------------------
 def sidebar_navigation():
     pages = {
-        "📘 Solo Quiz": "solo",
-        "🌐 Live Session": "live",
-        "🔁 Revision Lab": "revision",
-        "📊 Dashboard": "dashboard",
-        "🤖 Admin / AI Quiz Builder": "admin_ai",
+        "Solo Quiz": "solo",
+        "Live Session": "live",
+        "Revision Lab": "revision",
+        "Dashboard": "dashboard",
+        "Admin / AI Quiz Builder": "admin_ai",
     }
     return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
@@ -130,12 +128,12 @@ def sidebar_navigation():
 # SOLO QUIZ PAGE
 # ---------------------------------------------------------
 def solo_quiz_page():
-    st.header("📘 Solo Quiz")
+    st.header("Solo Quiz")
 
     init_session_utilities()
 
     st.checkbox(
-        "🎯 Demo Mode (stable for live demo)",
+        "Demo Mode (stable for live demo)",
         key="demo_mode"
     )
 
@@ -157,7 +155,7 @@ def solo_quiz_page():
     engine = st.session_state.get("engine")
 
     if not engine:
-        st.info("Click **Start / Restart Quiz** to begin.")
+        st.info("Click Start / Restart Quiz to begin.")
         return
 
     engine.mode = mode
@@ -166,34 +164,33 @@ def solo_quiz_page():
     q = engine.get_current_question()
 
     if q is None:
-        st.success("🎉 Quiz complete!")
-        if st.button("📊 View Dashboard"):
+        st.success("Quiz complete.")
+        if st.button("View Dashboard"):
             st.session_state["page"] = "dashboard"
             st.experimental_rerun()
         return
 
     selected = render_question_UI(q, mode)
 
-    # -------- ISL MODE --------
+    # ISL MODE SUPPORT
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
-    # --------------------------
 
     st.caption(
-        "ℹ️ Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
+        "Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
     )
 
     col1, col2 = st.columns(2)
 
     with col1:
         if engine.current_index > 0:
-            if st.button("⬅ Back"):
+            if st.button("Back"):
                 engine.current_index -= 1
                 st.experimental_rerun()
 
     with col2:
-        if st.button("Next ➜"):
+        if st.button("Next"):
             if selected:
                 engine.check_answer(selected)
                 st.session_state.history.append({
@@ -239,7 +236,7 @@ def main():
 
     render_user_profile()
 
-    if st.sidebar.button("🔁 Reset App"):
+    if st.sidebar.button("Reset App"):
         reset_app()
 
     page = sidebar_navigation()
