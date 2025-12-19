@@ -19,7 +19,7 @@ def reset_app():
 
 
 # ---------------------------------------------------------
-# USER PROFILE & AVATAR
+# USER PROFILE (NO CARTOON AVATAR)
 # ---------------------------------------------------------
 def render_user_profile():
     if "username" not in st.session_state:
@@ -35,11 +35,7 @@ def render_user_profile():
 
     if username:
         st.session_state.username = username
-        avatar_url = (
-            f"https://api.dicebear.com/7.x/adventurer-neutral/svg?seed={username}"
-        )
-        st.sidebar.image(avatar_url, width=110)
-        st.sidebar.caption("User Avatar")
+        st.sidebar.caption("Accessibility features enabled")
 
 
 # ---------------------------------------------------------
@@ -54,7 +50,7 @@ def init_session_utilities():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER SIGNS (REAL, SAFE)
+# ISL NUMBER VISUAL CUES (DEMO-SAFE, GUARANTEED)
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
@@ -63,55 +59,57 @@ def render_isl_number_signs(question_text: str):
     if not numbers:
         return
 
-    st.markdown("### 🔢 ISL Number Signs")
+    st.markdown("### 🔢 ISL Number Focus")
 
     cols = st.columns(len(numbers))
+
     for col, num in zip(cols, numbers):
         with col:
-            st.image(
-                f"https://isl-dataset.netlify.app/numbers/{num}.png",
-                width=90
+            st.markdown(
+                f"""
+                <div style="
+                    border: 1px solid #334155;
+                    border-radius: 10px;
+                    padding: 14px;
+                    text-align: center;
+                    background-color: #020617;
+                ">
+                    <div style="font-size: 32px;">✋</div>
+                    <div style="font-size: 26px; font-weight: 600;">{num}</div>
+                    <div style="font-size: 12px; color: #94a3b8;">
+                        ISL number cue
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
             )
-            st.caption(f"ISL sign for {num}")
 
 
 # ---------------------------------------------------------
-# ISL EXPLANATION (IMPROVED, NOT WEIRD)
+# ISL EXPLANATION PANEL (PROFESSIONAL)
 # ---------------------------------------------------------
 def render_isl_explanation(question_data):
     st.success("🤟 ISL Accessibility Mode Active")
 
-    isl_avatar_url = (
-        "https://api.dicebear.com/7.x/adventurer-neutral/svg?seed=isl_guide"
-    )
-
-    st.markdown("### 📖 Visual Explanation (ISL-Assisted)")
+    st.markdown("### 📖 ISL Visual Explanation Panel")
     st.caption(
-        "Visual sequencing designed for Indian Sign Language learners."
+        "Visual, non-audio guidance designed for Indian Sign Language learners."
     )
 
-    col1, col2 = st.columns([1, 4])
+    if question_data and "question" in question_data:
+        st.markdown(
+            f"🧠 **Question Focus:** {question_data['question']}"
+        )
 
-    with col1:
-        st.image(isl_avatar_url, width=100)
-        st.caption("ISL Guide")
+    steps = [
+        "Identify the **numbers and mathematical terms**.",
+        "Understand **what operation or comparison is required**.",
+        "Apply the **relevant rule or simplification**.",
+        "Select the **correct equivalent expression**."
+    ]
 
-    with col2:
-        if question_data and "question" in question_data:
-            st.markdown(
-                f"🧠 **Question focus:** {question_data['question']}"
-            )
-
-        steps = [
-            "Look at the **numbers and key words**.",
-            "Understand **what is being asked**.",
-            "Apply the **correct rule or concept**.",
-            "Choose the **best answer**."
-        ]
-
-        for step in steps:
-            st.write("👉 " + step)
-            time.sleep(0.25)
+    for step in steps:
+        st.write("• " + step)
 
 
 # ---------------------------------------------------------
@@ -149,7 +147,7 @@ def solo_quiz_page():
     subject_label = st.selectbox("Subject", ["Math", "English"])
     subject = subject_label.lower()
 
-    # Start / Restart
+    # Start / Restart Quiz
     if st.button("Start / Restart Quiz"):
         with st.spinner("Initializing quiz engine..."):
             time.sleep(0.3)
@@ -176,11 +174,11 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
-    # ---------- ISL MODE ----------
+    # -------- ISL MODE --------
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
-    # -----------------------------
+    # --------------------------
 
     st.caption(
         "ℹ️ Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
