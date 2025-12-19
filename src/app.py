@@ -1,29 +1,27 @@
 import streamlit as st
-import random
-import re
 from frontend.ui import apply_theme, render_question_UI
 from frontend.dashboard import render_dashboard
 from backend.logic import QuizEngine
 from ai.ai_builder import ai_quiz_builder
 from revision.revision_ui import render_revision_page
 
-# ---------------------------------------------------------
-# GLOBAL CLASSROOM STATE (PER SESSION – PROTOTYPE)
-# ---------------------------------------------------------
-if "classroom" not in st.session_state:
-    st.session_state.classroom = {
-        "code": None,
-        "questions": [],
-        "students": {}   # name -> status
-    }
+# ---- Classroom backend (Firebase + local fallback) ----
+from backend.cloud_store import (
+    create_classroom,
+    join_classroom,
+    add_classroom_question,
+    submit_classroom_answer,
+    get_classroom_state,
+)
 
 # ---------------------------------------------------------
-# RESET
+# RESET APP
 # ---------------------------------------------------------
 def reset_app():
     for k in list(st.session_state.keys()):
         del st.session_state[k]
     st.experimental_rerun()
+
 
 # ---------------------------------------------------------
 # USER PROFILE
@@ -31,10 +29,11 @@ def reset_app():
 def render_user_profile():
     st.sidebar.subheader("User Profile")
     role = st.sidebar.selectbox("Role", ["Student", "Teacher"])
-    st.session_state.role = role
+    st.session_state["role"] = role
+
 
 # ---------------------------------------------------------
-# NAVIGATION
+# SIDEBAR NAVIGATION
 # ---------------------------------------------------------
 def sidebar_navigation():
     pages = {
@@ -46,6 +45,7 @@ def sidebar_navigation():
     }
     return pages[st.sidebar.radio("Navigation", list(pages.keys()))]
 
+
 # ---------------------------------------------------------
 # TEACHER CLASSROOM
 # ---------------------------------------------------------
@@ -53,64 +53,78 @@ def teacher_classroom():
     st.header("Insight Classroom")
 
     # Create classroom
-    if st.session_state.classroom["code"] is None:
+    if "class_code" not in st.session_state:
         if st.button("Create Classroom"):
-            st.session_state.classroom["code"] = f"CLS-{random.randint(100,999)}"
+            st.session_state["class_code"] = create_classroom()
     else:
-        st.success(f"Classroom Code: {st.session_state.classroom['code']}")
+        st.success(f"Classroom Code: {st.session_state['class_code']}")
 
-    # Upload question
-    st.subheader("Upload Question")
-    q = st.text_input("Enter question for students")
-    if st.button("Add Question") and q:
-        st.session_state.classroom["questions"].append(q)
-        st.success("Question added")
+        # Upload question
+        st.subheader("Upload Question")
+        q = st.text_input("Enter question for students")
+        if st.button("Add Question") and q:
+            add_classroom_question(st.session_state["class_code"], q)
+            st.success("Question added")
 
-    # Student progress
-    st.subheader("Student Progress")
-    if not st.session_state.classroom["students"]:
-        st.info("No students joined yet")
-    else:
-        for name, status in st.session_state.classroom["students"].items():
-            st.write(f"• {name}: {status}")
+        # View classroom state
+        classroom = get_classroom_state(st.session_state["class_code"])
+
+        st.subheader("Student Progress")
+        students = classroom.get("students", {})
+        if not students:
+            st.info("No students joined yet")
+        else:
+            for name, data in students.items():
+                st.write(f"• {name}: {data.get('status', '—')}")
+
+        # View uploaded questions
+        st.subheader("Questions")
+        for i, q in enumerate(classroom.get("questions", [])):
+            st.write(f"Q{i+1}: {q}")
+
 
 # ---------------------------------------------------------
-# STUDENT JOIN CLASSROOM
+# STUDENT CLASSROOM
 # ---------------------------------------------------------
-def student_join_classroom():
+def student_classroom():
     st.header("Join Classroom")
 
     name = st.text_input("Your Name")
     code = st.text_input("Classroom Code")
 
     if st.button("Join Classroom"):
-        if code == st.session_state.classroom["code"]:
-            st.session_state.student_name = name
-            st.session_state.classroom["students"][name] = "Joined"
+        if join_classroom(code, name):
+            st.session_state["student_name"] = name
+            st.session_state["joined_code"] = code
             st.success("Joined classroom")
         else:
             st.error("Invalid classroom code")
 
+    # If joined, show questions
+    if "joined_code" in st.session_state:
+        classroom = get_classroom_state(st.session_state["joined_code"])
+        questions = classroom.get("questions", [])
+
+        st.subheader("Classroom Questions")
+
+        if not questions:
+            st.info("No questions uploaded yet")
+        else:
+            for i, q in enumerate(questions):
+                st.markdown(f"**Q{i+1}: {q}**")
+                ans = st.text_input("Your answer", key=f"ans_{i}")
+                if st.button("Submit Answer", key=f"submit_{i}"):
+                    submit_classroom_answer(
+                        st.session_state["joined_code"],
+                        st.session_state["student_name"],
+                        i,
+                        ans,
+                    )
+                    st.success("Answer submitted")
+
+
 # ---------------------------------------------------------
-# STUDENT ANSWER QUESTIONS
-# ---------------------------------------------------------
-def student_classroom_questions():
-    name = st.session_state.get("student_name")
-    if not name:
-        return
-
-    st.subheader("Classroom Questions")
-
-    for i, q in enumerate(st.session_state.classroom["questions"]):
-        st.markdown(f"**Q{i+1}: {q}**")
-        ans = st.text_input("Your answer", key=f"ans_{i}")
-
-        if st.button("Submit", key=f"submit_{i}"):
-            st.session_state.classroom["students"][name] = "Answered"
-            st.success("Answer submitted")
-
-# ---------------------------------------------------------
-# SOLO QUIZ (UNCHANGED CORE)
+# SOLO QUIZ PAGE
 # ---------------------------------------------------------
 def solo_quiz_page():
     st.header("Solo Quiz")
@@ -124,7 +138,7 @@ def solo_quiz_page():
     subject = subject_label.lower()
 
     if st.button("Start / Restart Quiz"):
-        st.session_state.engine = QuizEngine(mode, subject)
+        st.session_state["engine"] = QuizEngine(mode, subject)
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -145,6 +159,7 @@ def solo_quiz_page():
         engine.next_question()
         st.experimental_rerun()
 
+
 # ---------------------------------------------------------
 # ROUTER
 # ---------------------------------------------------------
@@ -155,25 +170,27 @@ def route_page(page):
         teacher_classroom()
         return
 
-    if role == "Student" and st.session_state.classroom["code"]:
-        student_join_classroom()
-        student_classroom_questions()
-
-    if page == "solo":
+    if role == "Student" and page == "solo":
         solo_quiz_page()
-    elif page == "dashboard":
+    elif role == "Student" and page == "dashboard":
         render_dashboard(st.session_state.get("engine"))
-    elif page == "revision":
+    elif role == "Student" and page == "revision":
         render_revision_page(st.session_state.get("engine"))
-    elif page == "live":
+    elif role == "Student" and page == "live":
         engine = st.session_state.get("engine")
         if engine:
             from live.live_sync import live_session_page
             live_session_page(engine, {})
         else:
             st.warning("Start a quiz first.")
-    elif page == "admin_ai":
+    elif role == "Student" and page == "admin_ai":
         ai_quiz_builder()
+
+    # Classroom join available to students at all times
+    if role == "Student":
+        st.divider()
+        student_classroom()
+
 
 # ---------------------------------------------------------
 # MAIN
@@ -189,6 +206,7 @@ def main():
 
     page = sidebar_navigation()
     route_page(page)
+
 
 if __name__ == "__main__":
     main()
