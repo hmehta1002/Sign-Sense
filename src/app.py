@@ -73,35 +73,90 @@ def render_dyslexic_decomposition(question_text):
 # QUESTION-SPECIFIC REASONING FLOW (ISL + ADHD)
 # ---------------------------------------------------------
 def render_reasoning_flow(question_text):
+    # Extract numbers and operators in order
     numbers = re.findall(r"\b\d+\b", question_text)
+    operators = re.findall(r"[+\-×÷*/]", question_text)
 
-    rule = "Left-to-right"
-    if ("+" in question_text or "-" in question_text) and \
-       ("×" in question_text or "÷" in question_text):
+    # Normalize operators
+    op_map = {
+        "+": "Addition",
+        "-": "Subtraction",
+        "×": "Multiplication",
+        "*": "Multiplication",
+        "÷": "Division",
+        "/": "Division",
+    }
+
+    op_names = [op_map.get(op, op) for op in operators]
+
+    # Build operation chain
+    operation_steps = []
+    for i in range(min(len(numbers) - 1, len(op_names))):
+        step = f"{numbers[i]} {op_names[i]} {numbers[i+1]}"
+        operation_steps.append(step)
+
+    if not operation_steps:
+        operation_steps = ["Single-step operation"]
+
+    # Decide rule
+    rule = "Left-to-right evaluation"
+    if any(op in op_names for op in ["Addition", "Subtraction"]) and \
+       any(op in op_names for op in ["Multiplication", "Division"]):
         rule = "BODMAS / Operator precedence"
 
+    # ---------- RENDER ----------
     st.markdown("### Reasoning Flow (Question-Specific)")
 
     cols = st.columns(4)
-    blocks = [
-        ("Numbers", ", ".join(numbers)),
-        ("Operations", "Detected from question"),
-        ("Rule Applied", rule),
-        ("Outcome", "Final Answer")
-    ]
 
-    for col, (title, value) in zip(cols, blocks):
-        with col:
-            st.markdown(
-                f"""
-                <div style="border:1px solid #334155;
-                border-radius:12px;padding:14px;
-                text-align:center;background:#020617;">
-                <b>{title}</b><br>{value}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    with cols[0]:
+        st.markdown(
+            f"""
+            <div style="border:1px solid #334155;
+            border-radius:12px;padding:14px;
+            text-align:center;background:#020617;">
+            <b>Numbers</b><br>{', '.join(numbers)}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with cols[1]:
+        st.markdown(
+            f"""
+            <div style="border:1px solid #334155;
+            border-radius:12px;padding:14px;
+            text-align:center;background:#020617;">
+            <b>Operations</b><br>{'<br>'.join(operation_steps)}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with cols[2]:
+        st.markdown(
+            f"""
+            <div style="border:1px solid #334155;
+            border-radius:12px;padding:14px;
+            text-align:center;background:#020617;">
+            <b>Rule Applied</b><br>{rule}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with cols[3]:
+        st.markdown(
+            f"""
+            <div style="border:1px solid #334155;
+            border-radius:12px;padding:14px;
+            text-align:center;background:#020617;">
+            <b>Outcome</b><br>Final Answer
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
 
 
 # ---------------------------------------------------------
