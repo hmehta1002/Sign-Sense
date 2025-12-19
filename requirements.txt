@@ -4,3 +4,5 @@ plotly
 numpy
 gTTS
 pyttsx3
+openai
+firebase-admin
