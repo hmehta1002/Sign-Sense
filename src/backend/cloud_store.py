@@ -1,7 +1,10 @@
 import os
+import random
 from typing import List, Dict
 
-# Local in-memory fallback if Firebase is not configured
+# -------------------------------
+# EXISTING SCORE STORAGE
+# -------------------------------
 LOCAL_SCORES: Dict[str, List[Dict]] = {}
 
 CLOUD_ENABLED = False
@@ -19,19 +22,13 @@ try:
         db = firestore.client()
         CLOUD_ENABLED = True
     else:
-        # No credentials path set; run in local mode
         CLOUD_ENABLED = False
 except Exception:
-    # firebase_admin not installed or failed → stay in local mode
     CLOUD_ENABLED = False
     db = None
 
 
 def add_score(session_code: str, name: str, score: int, mode: str, subject: str) -> bool:
-    """
-    Save score for a session. Returns True if saved to cloud, False if only local.
-    Never raises an exception; always safe.
-    """
     record = {
         "name": name or "Anonymous",
         "score": int(score),
@@ -39,7 +36,6 @@ def add_score(session_code: str, name: str, score: int, mode: str, subject: str)
         "subject": subject,
     }
 
-    # Try Firebase first
     if CLOUD_ENABLED and db is not None:
         try:
             scores_ref = (
@@ -50,26 +46,17 @@ def add_score(session_code: str, name: str, score: int, mode: str, subject: str)
             scores_ref.add(record)
             return True
         except Exception:
-            # Fall through to local
             pass
 
-    # Local in-memory fallback
     LOCAL_SCORES.setdefault(session_code, []).append(record)
     return False
 
 
 def get_leaderboard(session_code: str) -> List[Dict]:
-    """
-    Return a list of score records sorted by score desc.
-    Uses cloud if available, otherwise local fallback.
-    """
     records: List[Dict] = []
 
-    # Try Firebase
     if CLOUD_ENABLED and db is not None:
         try:
-            from firebase_admin import firestore  # type: ignore
-
             scores_ref = (
                 db.collection("sessions")
                 .document(session_code)
@@ -78,17 +65,115 @@ def get_leaderboard(session_code: str) -> List[Dict]:
             query = scores_ref.order_by(
                 "score", direction=firestore.Query.DESCENDING
             ).limit(20)
-            docs = query.stream()
-            for doc in docs:
+            for doc in query.stream():
                 data = doc.to_dict()
                 if data:
                     records.append(data)
         except Exception:
             records = []
 
-    # Fallback to local
     if not records:
         records = LOCAL_SCORES.get(session_code, [])
 
-    records = sorted(records, key=lambda r: r.get("score", 0), reverse=True)
-    return records
+    return sorted(records, key=lambda r: r.get("score", 0), reverse=True)
+
+
+# ===============================
+# NEW: CLASSROOM STORAGE
+# ===============================
+
+LOCAL_CLASSROOMS: Dict[str, Dict] = {}
+
+
+def create_classroom() -> str:
+    code = f"CLS-{random.randint(100,999)}"
+
+    classroom = {
+        "questions": [],
+        "students": {},   # name -> {status, answers}
+    }
+
+    if CLOUD_ENABLED and db is not None:
+        try:
+            db.collection("classrooms").document(code).set(classroom)
+        except Exception:
+            LOCAL_CLASSROOMS[code] = classroom
+    else:
+        LOCAL_CLASSROOMS[code] = classroom
+
+    return code
+
+
+def join_classroom(code: str, student_name: str) -> bool:
+    if not student_name:
+        return False
+
+    if CLOUD_ENABLED and db is not None:
+        try:
+            ref = db.collection("classrooms").document(code)
+            if not ref.get().exists:
+                return False
+            ref.update({
+                f"students.{student_name}": {
+                    "status": "Joined",
+                    "answers": {}
+                }
+            })
+            return True
+        except Exception:
+            return False
+
+    classroom = LOCAL_CLASSROOMS.get(code)
+    if not classroom:
+        return False
+
+    classroom["students"][student_name] = {
+        "status": "Joined",
+        "answers": {}
+    }
+    return True
+
+
+def add_classroom_question(code: str, question: str):
+    if CLOUD_ENABLED and db is not None:
+        try:
+            ref = db.collection("classrooms").document(code)
+            ref.update({
+                "questions": firestore.ArrayUnion([question])
+            })
+            return
+        except Exception:
+            pass
+
+    if code in LOCAL_CLASSROOMS:
+        LOCAL_CLASSROOMS[code]["questions"].append(question)
+
+
+def submit_classroom_answer(code: str, student_name: str, q_index: int, answer: str):
+    if CLOUD_ENABLED and db is not None:
+        try:
+            ref = db.collection("classrooms").document(code)
+            ref.update({
+                f"students.{student_name}.answers.{q_index}": answer,
+                f"students.{student_name}.status": "Answered"
+            })
+            return
+        except Exception:
+            pass
+
+    classroom = LOCAL_CLASSROOMS.get(code)
+    if classroom and student_name in classroom["students"]:
+        classroom["students"][student_name]["answers"][q_index] = answer
+        classroom["students"][student_name]["status"] = "Answered"
+
+
+def get_classroom_state(code: str) -> Dict:
+    if CLOUD_ENABLED and db is not None:
+        try:
+            doc = db.collection("classrooms").document(code).get()
+            if doc.exists:
+                return doc.to_dict() or {}
+        except Exception:
+            pass
+
+    return LOCAL_CLASSROOMS.get(code, {})
