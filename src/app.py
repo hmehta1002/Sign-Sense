@@ -76,11 +76,11 @@ def render_isl_demo_avatar():
 
 
 # ---------------------------------------------------------
-# ISL NUMBER VISUAL CUES (GUARANTEED)
+# ISL NUMBER VISUAL CUES
 # ---------------------------------------------------------
 def render_isl_number_signs(question_text: str):
     numbers = re.findall(r"\b\d+\b", question_text)
-    numbers = list(dict.fromkeys(numbers))[:2]
+    numbers = list(dict.fromkeys(numbers))[:3]
 
     if not numbers:
         return
@@ -101,7 +101,45 @@ def render_isl_number_signs(question_text: str):
                 ">
                     <div style="font-size:28px;font-weight:600;">{num}</div>
                     <div style="font-size:12px;color:#94a3b8;">
-                        Visual number cue for ISL learners
+                        Visual number cue
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+# ---------------------------------------------------------
+# SIGN-FIRST REASONING GRAPH (ISL + ADHD)
+# ---------------------------------------------------------
+def render_reasoning_graph(question_text: str):
+    st.markdown("### Reasoning Flow (Visual)")
+
+    steps = [
+        ("Numbers", "Identify all numbers"),
+        ("Operation", "Understand the operation"),
+        ("Rule", "Apply the correct rule"),
+        ("Answer", "Choose final result"),
+    ]
+
+    cols = st.columns(len(steps))
+
+    for col, (title, desc) in zip(cols, steps):
+        with col:
+            st.markdown(
+                f"""
+                <div style="
+                    border:1px solid #334155;
+                    border-radius:12px;
+                    padding:16px;
+                    text-align:center;
+                    background:#020617;
+                ">
+                    <div style="font-size:14px;font-weight:600;">
+                        {title}
+                    </div>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:6px;">
+                        {desc}
                     </div>
                 </div>
                 """,
@@ -127,13 +165,11 @@ def render_isl_explanation(question_data):
 
     with col2:
         if question_data and "question" in question_data:
-            st.markdown(
-                f"**Question Focus:** {question_data['question']}"
-            )
+            st.markdown(f"**Question Focus:** {question_data['question']}")
 
         steps = [
             "Identify the numbers and mathematical terms.",
-            "Understand what operation or comparison is required.",
+            "Understand what operation is required.",
             "Apply the relevant rule or simplification.",
             "Select the correct equivalent expression."
         ]
@@ -163,11 +199,6 @@ def solo_quiz_page():
     st.header("Solo Quiz")
 
     init_session_utilities()
-
-    st.checkbox(
-        "Demo Mode (stable for live demo)",
-        key="demo_mode"
-    )
 
     mode = st.selectbox(
         "Accessibility Mode",
@@ -203,9 +234,14 @@ def solo_quiz_page():
 
     selected = render_question_UI(q, mode)
 
+    # ---------- ADHD + ISL ADDITIONS ----------
+    if mode in ["isl", "adhd"]:
+        render_reasoning_graph(q.get("question", ""))
+
     if mode == "isl":
         render_isl_number_signs(q.get("question", ""))
         render_isl_explanation(q)
+    # -----------------------------------------
 
     st.caption(
         "Answers are evaluated using quiz logic and AI-assisted difficulty tuning."
@@ -235,16 +271,12 @@ def solo_quiz_page():
 # ROUTER
 # ---------------------------------------------------------
 def route_page(page_name: str):
-
     if page_name == "solo":
         solo_quiz_page()
-
     elif page_name == "dashboard":
         render_dashboard(st.session_state.get("engine"))
-
     elif page_name == "revision":
         render_revision_page(st.session_state.get("engine"))
-
     elif page_name == "live":
         engine = st.session_state.get("engine")
         if not engine:
@@ -252,7 +284,6 @@ def route_page(page_name: str):
             return
         from live.live_sync import live_session_page
         live_session_page(engine, {})
-
     elif page_name == "admin_ai":
         ai_quiz_builder()
 
