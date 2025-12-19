@@ -2,7 +2,7 @@ import streamlit as st
 import time
 
 # ---------------------------------------------------------
-# SAFE IMPORTS (fallbacks prevent crashes)
+# SAFE IMPORTS (use real code if present, fallback if not)
 # ---------------------------------------------------------
 try:
     from backend.logic import QuizEngine
@@ -28,12 +28,7 @@ except Exception:
                     "question": "48 ÷ 6 × 4",
                     "options": ["8", "16", "32"],
                     "answer": "32",
-                },
-                {
-                    "question": "15 + 5 × 2",
-                    "options": ["40", "25", "20"],
-                    "answer": "25",
-                },
+                }
             ]
 
         def get_current_question(self):
@@ -85,13 +80,17 @@ def log_cognitive(student, question, data):
 def solo_quiz():
     st.header("📘 Solo Quiz")
 
-    mode = st.selectbox("Accessibility Mode", ["standard", "isl", "adhd", "dyslexia"])
-    subject = st.selectbox("Subject", ["Math", "English"])
+    mode = st.selectbox(
+        "Accessibility Mode",
+        ["standard", "isl", "adhd", "dyslexia"]
+    )
+
+    # 🔴 IMPORTANT FIX: lowercase subject
+    subject = st.selectbox("Subject", ["Math", "English"]).lower()
 
     if st.button("Start / Restart Quiz"):
         st.session_state.engine = QuizEngine(mode, subject)
         st.session_state.start_time = time.time()
-        st.session_state.option_changes = 0
         st.experimental_rerun()
 
     engine = st.session_state.get("engine")
@@ -105,20 +104,22 @@ def solo_quiz():
         return
 
     st.subheader(q["question"])
-    choice = st.radio("Choose an option", q["options"], key="opt")
+    choice = st.radio("Choose an option", q["options"])
 
     if st.button("Next"):
         spent = int(time.time() - st.session_state.start_time)
+
         log_cognitive(
             "Solo_User",
             q["question"],
             {
                 "mode": mode,
                 "time_spent": spent,
-                "option_changes": st.session_state.option_changes,
+                "option_changes": 0,
                 "hesitation": "Yes" if spent > 10 else "No",
             },
         )
+
         engine.check_answer(choice)
         engine.next_question()
         st.session_state.start_time = time.time()
@@ -147,7 +148,12 @@ def student_classroom():
             st.markdown(f"**Q{i+1}: {q}**")
             ans = st.text_input("Answer", key=f"a{i}")
             if st.button("Submit", key=f"s{i}"):
-                submit_classroom_answer(st.session_state.joined, st.session_state.student, i, ans)
+                submit_classroom_answer(
+                    st.session_state.joined,
+                    st.session_state.student,
+                    i,
+                    ans,
+                )
                 st.success("Submitted")
 
 # ---------------------------------------------------------
@@ -163,7 +169,7 @@ def teacher_classroom():
         st.success(f"Classroom Code: {st.session_state.class_code}")
 
         q = st.text_input("Add Question")
-        if st.button("Add Question"):
+        if st.button("Add Question") and q:
             add_classroom_question(st.session_state.class_code, q)
             st.success("Added")
 
@@ -188,7 +194,6 @@ def teacher_classroom():
 **Question:** {question}  
 Mode: **{r['mode']}**  
 Time Spent: **{r['time_spent']} sec**  
-Option Changes: **{r['option_changes']}**  
 Hesitation: **{r['hesitation']}**
 """)
 
