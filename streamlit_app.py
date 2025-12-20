@@ -3,7 +3,7 @@ import time
 import os
 
 # ---------------------------------------------------------
-# IMPORT EXISTING MODULES (OLD PROTOTYPE)
+# IMPORT EXISTING MODULES
 # ---------------------------------------------------------
 from backend.logic import QuizEngine
 from backend.cloud_store import (
@@ -25,27 +25,56 @@ st.session_state.setdefault("cognitive_log", {})
 st.session_state.setdefault("chat_history", [])
 
 # ---------------------------------------------------------
-# COGNITIVE LOGGING (NEW – ADDITIVE)
+# PDF HELPERS (NEW)
+# ---------------------------------------------------------
+def extract_text_from_pdf(pdf_file):
+    try:
+        import PyPDF2
+        reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text
+    except Exception:
+        return ""
+
+
+def generate_questions_from_pdf(text):
+    """
+    Prototype-level PDF → Quiz generator.
+    In production, this is AI-powered.
+    """
+    return [
+        {
+            "question": "What is the main concept discussed in the document?",
+            "options": ["Option A", "Option B", "Option C"],
+            "answer": "Option A",
+        },
+        {
+            "question": "Which statement best summarizes the content?",
+            "options": ["Statement 1", "Statement 2", "Statement 3"],
+            "answer": "Statement 1",
+        },
+    ]
+
+# ---------------------------------------------------------
+# COGNITIVE LOGGING
 # ---------------------------------------------------------
 def log_cognitive(student, question, meta):
     st.session_state.cognitive_log.setdefault(student, {}).setdefault(question, []).append(meta)
 
 # ---------------------------------------------------------
-# DYNAMIC FLOW OVERLAY (NEW – ADDITIVE)
+# DYNAMIC FLOW OVERLAY
 # ---------------------------------------------------------
 def dynamic_flow_overlay(question, subject):
     st.markdown("#### 🔄 Reasoning Flow")
     if subject == "math":
-        st.code(
-            "Read numbers\n↓\nApply BODMAS\n↓\nSolve step-by-step\n↓\nAnswer"
-        )
+        st.code("Read numbers\n↓\nApply BODMAS\n↓\nSolve step-by-step\n↓\nAnswer")
     else:
-        st.code(
-            "Read sentence\n↓\nIdentify key idea\n↓\nEliminate options\n↓\nAnswer"
-        )
+        st.code("Read sentence\n↓\nIdentify key idea\n↓\nEliminate options\n↓\nAnswer")
 
 # ---------------------------------------------------------
-# AI LEARNING ASSISTANT (SAFE SIDEBAR CHATBOT)
+# AI LEARNING ASSISTANT
 # ---------------------------------------------------------
 def render_chatbot():
     st.sidebar.divider()
@@ -61,7 +90,7 @@ def render_chatbot():
 
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            reply = "AI not connected. In full version, this explains the steps."
+            reply = "AI not connected. In production, this explains steps."
         else:
             try:
                 from openai import OpenAI
@@ -69,10 +98,7 @@ def render_chatbot():
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
-                        {
-                            "role": "system",
-                            "content": "Explain concepts step-by-step. Do not give direct answers.",
-                        },
+                        {"role": "system", "content": "Explain concepts step-by-step."},
                         {"role": "user", "content": user_input},
                     ],
                     max_tokens=200,
@@ -87,20 +113,37 @@ def render_chatbot():
         st.sidebar.markdown(f"**{who}:** {msg}")
 
 # ---------------------------------------------------------
-# SOLO QUIZ (OLD + NEW)
+# SOLO QUIZ (WITH PDF UPLOAD)
 # ---------------------------------------------------------
 def solo_quiz():
     st.header("📘 Solo Quiz")
 
-    mode = st.selectbox(
-        "Accessibility Mode",
-        ["standard", "isl", "adhd", "dyslexia"],
-    )
-
+    mode = st.selectbox("Accessibility Mode", ["standard", "isl", "adhd", "dyslexia"])
     subject = st.selectbox("Subject", ["Math", "English"]).lower()
 
+    st.markdown("### Question Source")
+    source = st.radio(
+        "Choose how questions are loaded:",
+        ["Built-in Quiz", "Upload PDF Dataset"]
+    )
+
+    pdf_text = None
+    if source == "Upload PDF Dataset":
+        pdf_file = st.file_uploader("Upload PDF file", type=["pdf"])
+        if pdf_file:
+            pdf_text = extract_text_from_pdf(pdf_file)
+            if pdf_text.strip():
+                st.success("PDF loaded successfully.")
+            else:
+                st.warning("Could not extract text from PDF.")
+
     if st.button("Start / Restart Quiz"):
-        st.session_state.engine = QuizEngine(mode, subject)
+        engine = QuizEngine(mode, subject)
+
+        if source == "Upload PDF Dataset" and pdf_text:
+            engine.questions = generate_questions_from_pdf(pdf_text)
+
+        st.session_state.engine = engine
         st.session_state.q_start_time = time.time()
         st.experimental_rerun()
 
@@ -111,13 +154,12 @@ def solo_quiz():
 
     q = engine.get_current_question()
     if not q:
+        st.balloons()
         st.success("🎉 Quiz completed!")
         return
 
-    # ---- OLD PROTOTYPE UI (UNCHANGED) ----
     selected = render_question_UI(q, mode)
 
-    # ---- NEW FLOW OVERLAY (ADDITIVE) ----
     if mode in ["isl", "adhd"]:
         dynamic_flow_overlay(q["question"], subject)
 
@@ -143,12 +185,13 @@ def solo_quiz():
                     },
                 )
                 engine.check_answer(selected)
+
             engine.next_question()
             st.session_state.q_start_time = time.time()
             st.experimental_rerun()
 
 # ---------------------------------------------------------
-# STUDENT CLASSROOM (OLD)
+# STUDENT CLASSROOM
 # ---------------------------------------------------------
 def student_classroom():
     st.header("🎓 Student Classroom")
@@ -158,6 +201,7 @@ def student_classroom():
 
     if st.button("Join Classroom"):
         if join_classroom(code, name):
+            st.balloons()
             st.session_state.student = name
             st.session_state.joined_code = code
             st.success("Joined classroom")
@@ -179,7 +223,7 @@ def student_classroom():
                 st.success("Submitted")
 
 # ---------------------------------------------------------
-# TEACHER CLASSROOM + INSIGHTS (OLD + NEW)
+# TEACHER CLASSROOM + COGNITIVE CARDS
 # ---------------------------------------------------------
 def teacher_classroom():
     st.header("🧑‍🏫 Insight Classroom")
@@ -187,6 +231,7 @@ def teacher_classroom():
     if "class_code" not in st.session_state:
         if st.button("Create Classroom"):
             st.session_state.class_code = create_classroom()
+            st.balloons()
     else:
         st.success(f"Classroom Code: {st.session_state.class_code}")
 
@@ -202,23 +247,37 @@ def teacher_classroom():
         for name, data in students.items():
             st.write(f"• {name} — {data.get('status', 'Joined')}")
 
-    # ---- NEW COGNITIVE REPLAY ----
-        st.divider()
-        st.subheader("🧠 Cognitive Replay")
+    st.divider()
+    st.subheader("🧠 Cognitive Replay")
 
-        if not st.session_state.cognitive_log:
-            st.info("No cognitive data yet.")
-        else:
-            for student, qs in st.session_state.cognitive_log.items():
-                st.markdown(f"**{student}**")
-                for q, entries in qs.items():
-                    last = entries[-1]
-                    st.write(
-                        f"- {q} | time: {last['time_spent']}s | hesitation: {last['hesitation']}"
+    if not st.session_state.cognitive_log:
+        st.info("No cognitive data yet.")
+    else:
+        for student, qs in st.session_state.cognitive_log.items():
+            st.markdown(f"### 👤 {student}")
+            for q, entries in qs.items():
+                last = entries[-1]
+                if last["hesitation"]:
+                    status = "🔴 Needs Attention"
+                    color = "#ff4d4d"
+                else:
+                    status = "🟢 Confident"
+                    color = "#2ecc71"
+
+                st.markdown(
+                    f"""
+                    <div style="padding:12px; margin-bottom:10px;
+                    border-left:6px solid {color}; background:#f9f9f9;">
+                    <b>Question:</b> {q}<br>
+                    <b>Time:</b> {last["time_spent"]}s<br>
+                    <b>Status:</b> {status}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
 # ---------------------------------------------------------
-# MAIN ROUTER (OLD)
+# MAIN
 # ---------------------------------------------------------
 def main():
     st.set_page_config(page_title="SignSense", layout="wide")
