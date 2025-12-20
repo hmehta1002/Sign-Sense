@@ -272,6 +272,7 @@ def student_classroom():
 def teacher_classroom():
     st.header("🧑‍🏫 Insight Classroom")
 
+    # -------- Classroom creation --------
     if "class_code" not in st.session_state:
         if st.button("Create Classroom"):
             st.session_state.class_code = create_classroom()
@@ -279,15 +280,15 @@ def teacher_classroom():
     else:
         st.success(f"Classroom Code: {st.session_state.class_code}")
 
-        q = st.text_input("Upload Question")
-        if st.button("Add Question") and q:
-            add_classroom_question(st.session_state.class_code, q)
+        question = st.text_input("Upload Question for Students")
+        if st.button("Add Question") and question:
+            add_classroom_question(st.session_state.class_code, question)
             st.success("Question added")
 
         classroom = get_classroom_state(st.session_state.class_code)
         students = classroom.get("students", {})
 
-        st.subheader("Students")
+        st.subheader("👥 Students")
         if not students:
             st.info("No students joined yet.")
         else:
@@ -295,17 +296,19 @@ def teacher_classroom():
                 st.write(f"• {name} — {data.get('status', 'Joined')}")
 
     st.divider()
+
+    # -------- Cognitive Replay --------
     st.subheader("🧠 Cognitive Replay")
 
-    if not st.session_state.cognitive_log:
+    if "cognitive_log" not in st.session_state or not st.session_state.cognitive_log:
         st.info("No cognitive data yet.")
         return
 
-    for student, qs in st.session_state.cognitive_log.items():
+    for student, questions in st.session_state.cognitive_log.items():
         st.markdown(f"### 👤 {student}")
 
-        for question_text, entries in qs.items():
-            last = entries[-1]
+        for question_text, attempts in questions.items():
+            last = attempts[-1]
 
             if last["hesitation"]:
                 status = "🔴 Needs Attention"
@@ -318,12 +321,12 @@ def teacher_classroom():
                 f"""
                 <div style="
                     padding:14px;
-                    margin-bottom:12px;
+                    margin-bottom:14px;
                     border-left:6px solid {color};
                     background-color:#0e1626;
                     color:#ffffff;
-                    border-radius:8px;
-                    box-shadow:0 4px 10px rgba(0,0,0,0.25);
+                    border-radius:10px;
+                    box-shadow:0 4px 10px rgba(0,0,0,0.3);
                 ">
                     <div style="font-size:15px; font-weight:600; margin-bottom:6px;">
                         ❓ Question
@@ -341,7 +344,6 @@ def teacher_classroom():
                 """,
                 unsafe_allow_html=True,
             )
-
 
 # ---------------------------------------------------------
 # MAIN
