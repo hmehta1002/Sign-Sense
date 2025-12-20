@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent / "src"
+sys.path.append(str(BASE_DIR))
+
 import streamlit as st
 import time
 import os
