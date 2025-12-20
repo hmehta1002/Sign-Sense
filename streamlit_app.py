@@ -296,60 +296,33 @@ def teacher_classroom():
                 st.write(f"• {name} — {data.get('status', 'Joined')}")
 
     st.divider()
-
-    # -------- Cognitive Replay --------
     st.subheader("🧠 Cognitive Replay")
 
-    if "cognitive_log" not in st.session_state or not st.session_state.cognitive_log:
+    if not st.session_state.get("cognitive_log"):
         st.info("No cognitive data yet.")
         return
 
     for student, questions in st.session_state.cognitive_log.items():
         st.markdown(f"### 👤 {student}")
 
-        rendered = set()  # prevent duplicate rendering
-
         for question_text, attempts in questions.items():
-            if question_text in rendered:
-                continue
-            rendered.add(question_text)
-
             last = attempts[-1]
 
+            status = "🟢 Confident"
             if last.get("hesitation"):
                 status = "🔴 Needs Attention"
-                color = "#ff4d4d"
-            else:
-                status = "🟢 Confident"
-                color = "#2ecc71"
 
-            st.markdown(
-                f"""
-                <div style="
-                    padding:14px;
-                    margin-bottom:14px;
-                    border-left:6px solid {color};
-                    background-color:#0e1626;
-                    color:#ffffff;
-                    border-radius:10px;
-                    box-shadow:0 4px 10px rgba(0,0,0,0.3);
-                ">
-                    <div style="font-size:15px; font-weight:600; margin-bottom:6px;">
-                        ❓ Question
-                    </div>
+            with st.container():
+                st.markdown("**❓ Question**")
+                st.write(question_text)
 
-                    <div style="margin-bottom:8px;">
-                        {question_text}
-                    </div>
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Time Taken (s)", last.get("time_spent", 0))
+                with col2:
+                    st.metric("Status", status)
 
-                    <div style="font-size:13px;">
-                        ⏱ <b>Time Taken:</b> {last.get("time_spent", 0)}s<br>
-                        📊 <b>Status:</b> {status}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                st.divider()
 
 # ---------------------------------------------------------
 # MAIN
