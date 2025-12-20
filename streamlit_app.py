@@ -307,10 +307,16 @@ def teacher_classroom():
     for student, questions in st.session_state.cognitive_log.items():
         st.markdown(f"### 👤 {student}")
 
+        rendered = set()  # prevent duplicate rendering
+
         for question_text, attempts in questions.items():
+            if question_text in rendered:
+                continue
+            rendered.add(question_text)
+
             last = attempts[-1]
 
-            if last["hesitation"]:
+            if last.get("hesitation"):
                 status = "🔴 Needs Attention"
                 color = "#ff4d4d"
             else:
@@ -337,7 +343,7 @@ def teacher_classroom():
                     </div>
 
                     <div style="font-size:13px;">
-                        ⏱ <b>Time Taken:</b> {last["time_spent"]}s<br>
+                        ⏱ <b>Time Taken:</b> {last.get("time_spent", 0)}s<br>
                         📊 <b>Status:</b> {status}
                     </div>
                 </div>
