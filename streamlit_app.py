@@ -288,37 +288,60 @@ def teacher_classroom():
         students = classroom.get("students", {})
 
         st.subheader("Students")
-        for name, data in students.items():
-            st.write(f"• {name} — {data.get('status', 'Joined')}")
+        if not students:
+            st.info("No students joined yet.")
+        else:
+            for name, data in students.items():
+                st.write(f"• {name} — {data.get('status', 'Joined')}")
 
     st.divider()
     st.subheader("🧠 Cognitive Replay")
 
     if not st.session_state.cognitive_log:
         st.info("No cognitive data yet.")
-    else:
-        for student, qs in st.session_state.cognitive_log.items():
-            st.markdown(f"### 👤 {student}")
-            for q, entries in qs.items():
-                last = entries[-1]
-                if last["hesitation"]:
-                    status = "🔴 Needs Attention"
-                    color = "#ff4d4d"
-                else:
-                    status = "🟢 Confident"
-                    color = "#2ecc71"
+        return
 
-                st.markdown(
-                    f"""
-                    <div style="padding:12px; margin-bottom:10px;
-                    border-left:6px solid {color}; background:#f9f9f9;">
-                    <b>Question:</b> {q}<br>
-                    <b>Time:</b> {last["time_spent"]}s<br>
-                    <b>Status:</b> {status}
+    for student, qs in st.session_state.cognitive_log.items():
+        st.markdown(f"### 👤 {student}")
+
+        for question_text, entries in qs.items():
+            last = entries[-1]
+
+            if last["hesitation"]:
+                status = "🔴 Needs Attention"
+                color = "#ff4d4d"
+            else:
+                status = "🟢 Confident"
+                color = "#2ecc71"
+
+            st.markdown(
+                f"""
+                <div style="
+                    padding:14px;
+                    margin-bottom:12px;
+                    border-left:6px solid {color};
+                    background-color:#0e1626;
+                    color:#ffffff;
+                    border-radius:8px;
+                    box-shadow:0 4px 10px rgba(0,0,0,0.25);
+                ">
+                    <div style="font-size:15px; font-weight:600; margin-bottom:6px;">
+                        ❓ Question
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+
+                    <div style="margin-bottom:8px;">
+                        {question_text}
+                    </div>
+
+                    <div style="font-size:13px;">
+                        ⏱ <b>Time Taken:</b> {last["time_spent"]}s<br>
+                        📊 <b>Status:</b> {status}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
 
 # ---------------------------------------------------------
 # MAIN
