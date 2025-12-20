@@ -7,6 +7,7 @@ sys.path.append(str(BASE_DIR))
 import streamlit as st
 import time
 import os
+import re
 
 # ---------------------------------------------------------
 # IMPORT EXISTING MODULES
@@ -47,21 +48,58 @@ def extract_text_from_pdf(pdf_file):
 
 def generate_questions_from_pdf(text):
     """
-    Prototype-level PDF → Quiz generator.
-    In production, this is AI-powered.
+    Generic MCQ parser for independent dataset PDFs.
+    Supports standard formats like:
+    1. Question
+    a) Option
+    b) Option
+    c) Option
+    d) Option
     """
-    return [
-        {
-            "question": "What is the main concept discussed in the document?",
-            "options": ["Option A", "Option B", "Option C"],
-            "answer": "Option A",
-        },
-        {
-            "question": "Which statement best summarizes the content?",
-            "options": ["Statement 1", "Statement 2", "Statement 3"],
-            "answer": "Statement 1",
-        },
-    ]
+
+    questions = []
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # Detect question (starts with number + dot)
+        if re.match(r"^\d+\.", line):
+            question_text = re.sub(r"^\d+\.\s*", "", line)
+            options = []
+
+            j = i + 1
+            while j < len(lines) and len(options) < 4:
+                if re.match(r"^[a-dA-D][\)\.]", lines[j]):
+                    option = re.sub(r"^[a-dA-D][\)\.]\s*", "", lines[j])
+                    options.append(option)
+                j += 1
+
+            if len(options) >= 2:
+                questions.append({
+                    "question": question_text,
+                    "options": options,
+                    "answer": options[0],  # placeholder
+                })
+
+            i = j
+        else:
+            i += 1
+
+    # Fallback (never crash)
+    if not questions:
+        questions = [{
+            "question": "Dataset loaded successfully, but no MCQs detected.",
+            "options": [
+                "Check PDF format",
+                "Ensure MCQ structure",
+                "Try another dataset"
+            ],
+            "answer": "Check PDF format",
+        }]
+
+    return questions
 
 # ---------------------------------------------------------
 # COGNITIVE LOGGING
