@@ -6,3 +6,4 @@ gTTS
 pyttsx3
 firebase-admin
 openai>=1.12.0
+PyPDF2
